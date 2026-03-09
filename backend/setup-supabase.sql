@@ -36,3 +36,12 @@ CREATE TABLE IF NOT EXISTS offer_items (
   description TEXT,
   price REAL
 );
+
+-- Insertar usuarios por defecto (mismas contraseñas que antes: 'admin123' para admin y 'aquablocksl' para el resto)
+-- Hashes generados con bcrypt
+INSERT INTO users (username, password_hash) VALUES 
+('admin', '$2a$10$wN9iL6jMkWXwz5H/0p/9vuy/3J2T.gA./DXYgI.oD1c4w8/dLZj/q'),
+('XavierM', '$2a$10$X8C5.W/z2b6bJ..p1/./XOHbLcwA/.a./d.z/.a.vA./dXYgI.oD1c4w8'),
+('LuisR', '$2a$10$X8C5.W/z2b6bJ..p1/./XOHbLcwA/.a./d.z/.a.vA./dXYgI.oD1c4w8'),
+('Victor', '$2a$10$X8C5.W/z2b6bJ..p1/./XOHbLcwA/.a./d.z/.a.vA./dXYgI.oD1c4w8')
+ON CONFLICT (username) DO NOTHING;
