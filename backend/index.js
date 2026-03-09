@@ -25,6 +25,13 @@ app.get('/', (req, res) => {
     res.send('CRM API is running');
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// Conditionally listen if not running on Vercel
+if (process.env.VERCEL) {
+    console.log('Running on Vercel');
+} else {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}
+
+module.exports = app;
