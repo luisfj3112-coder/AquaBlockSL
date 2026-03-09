@@ -44,6 +44,8 @@ INSERT INTO users (username, password_hash) VALUES
 ('XavierM', '$2a$10$X8C5.W/z2b6bJ..p1/./XOHbLcwA/.a./d.z/.a.vA./dXYgI.oD1c4w8'),
 ('LuisR', '$2a$10$X8C5.W/z2b6bJ..p1/./XOHbLcwA/.a./d.z/.a.vA./dXYgI.oD1c4w8'),
 ('Victor', '$2a$10$X8C5.W/z2b6bJ..p1/./XOHbLcwA/.a./d.z/.a.vA./dXYgI.oD1c4w8')
+ON CONFLICT (username) DO NOTHING;
+
 -- Crear el bucket de almacenamiento para las imágenes si no existe
 insert into storage.buckets (id, name, public)
 values ('images', 'images', true)
