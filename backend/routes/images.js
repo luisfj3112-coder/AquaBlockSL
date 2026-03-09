@@ -1,55 +1,84 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const db = require('../db');
-const fs = require('fs');
+const supabase = require('../db');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const dir = path.join(__dirname, '../uploads');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-        cb(null, dir);
-    },
-    filename: (req, file, cb) => {
-        const cleanName = file.originalname.replace(/[\r\n\s]+/g, '_').trim();
-        cb(null, Date.now() + '-' + cleanName);
-    }
-});
-
+// Use memory storage for Multer to get the file buffer directly
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // Get images for a client
-router.get('/:clientId', (req, res) => {
+router.get('/:clientId', async (req, res) => {
     const { clientId } = req.params;
-    const images = db.prepare('SELECT * FROM images WHERE client_id = ?').all(clientId);
-    res.send(images);
+    const { data: images, error } = await supabase.from('images').select('*').eq('client_id', clientId);
+    if (error) return res.status(500).send(error);
+    res.send(images || []);
 });
 
 // Upload images
-router.post('/:clientId', upload.array('photos'), (req, res) => {
+router.post('/:clientId', upload.array('photos'), async (req, res) => {
     const { clientId } = req.params;
     const files = req.files;
-    if (!files) return res.status(400).send('No files uploaded');
+    if (!files || files.length === 0) return res.status(400).send('No files uploaded');
 
-    const stmt = db.prepare('INSERT INTO images (client_id, filename) VALUES (?, ?)');
-    const results = files.map(file => {
-        const info = stmt.run(clientId, file.filename);
-        return { id: info.lastInsertRowid, client_id: clientId, filename: file.filename };
-    });
+    const results = [];
+
+    for (const file of files) {
+        // Clean filename to avoid issues in storage
+        const cleanName = file.originalname.replace(/[\r\n\s]+/g, '_').trim();
+        const fileName = `${Date.now()}-${cleanName}`;
+
+        // Upload to Supabase Storage 'images' bucket
+        const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('images')
+            .upload(fileName, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false
+            });
+
+        if (uploadError) {
+            console.error('Error uploading file to storage:', uploadError);
+            continue; // Skip this file and try the next one
+        }
+
+        // Insert record in 'images' table
+        const { data: dbData, error: dbError } = await supabase
+            .from('images')
+            .insert([{ client_id: clientId, filename: fileName }])
+            .select()
+            .single();
+
+        if (dbError) {
+            console.error('Error inserting image record:', dbError);
+            continue;
+        }
+
+        results.push(dbData);
+    }
 
     res.status(201).send(results);
 });
 
 // Delete an image
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
     const { id } = req.params;
-    const image = db.prepare('SELECT * FROM images WHERE id = ?').get(id);
+
+    // Get the image record to know the filename
+    const { data: image, error: fetchError } = await supabase
+        .from('images')
+        .select('*')
+        .eq('id', id)
+        .single();
+
     if (image) {
-        const filePath = path.join(__dirname, '../uploads', image.filename);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        db.prepare('DELETE FROM images WHERE id = ?').run(id);
+        // Delete from Supabase Storage
+        await supabase.storage.from('images').remove([image.filename]);
+
+        // Delete from database
+        await supabase.from('images').delete().eq('id', id);
     }
+
     res.status(204).send();
 });
 

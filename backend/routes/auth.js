@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const supabase = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_fallback_secret';
 
@@ -13,18 +13,31 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     try {
-        const info = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, hashedPassword);
-        res.status(201).send({ id: info.lastInsertRowid, username });
+        const { data, error } = await supabase
+            .from('users')
+            .insert([{ username, password_hash: hashedPassword }])
+            .select();
+
+        if (error) throw error;
+
+        res.status(201).send({ id: data[0].id, username });
     } catch (err) {
-        res.status(400).send('User already exists');
+        console.error(err);
+        res.status(400).send('User already exists or error creating user');
     }
 });
 
 // Login
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .single();
+
+    if (error || !user || !(await bcrypt.compare(password, user.password_hash))) {
         return res.status(401).send('Invalid credentials');
     }
 

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const supabase = require('../db');
 const fs = require('fs');
 const path = require('path');
 
@@ -16,45 +16,68 @@ const log = (msg) => {
 };
 
 // Get all clients
-router.get('/', (req, res) => {
-    const clients = db.prepare(`
-        SELECT c.*, 
-        (SELECT GROUP_CONCAT(filename) FROM images WHERE client_id = c.id) as images_list
-        FROM clients c
-    `).all();
-    res.send(clients);
+router.get('/', async (req, res) => {
+    try {
+        const { data: clients, error: clientsError } = await supabase
+            .from('clients')
+            .select('*');
+
+        if (clientsError) throw clientsError;
+
+        const { data: images, error: imagesError } = await supabase
+            .from('images')
+            .select('*');
+
+        if (imagesError) throw imagesError;
+
+        // Group images locally to match previous response shape
+        const clientsWithImages = clients.map(c => {
+            const clientImages = images.filter(img => img.client_id === c.id);
+            return {
+                ...c,
+                images_list: clientImages.map(img => img.filename).join(',') || null
+            };
+        });
+
+        res.send(clientsWithImages);
+    } catch (err) {
+        console.error('Error fetching clients:', err);
+        res.status(500).send({ error: 'Failed to fetch clients' });
+    }
 });
 
 // Add new client
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     log(`POST /clients - Body: ${JSON.stringify(req.body)}`);
     const { name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered, man_num, order_date, stage, items } = req.body;
 
-    const insertClient = db.prepare(`
-        INSERT INTO clients (name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered, man_num, order_date, stage)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const insertItem = db.prepare(`
-        INSERT INTO offer_items (client_id, description, price)
-        VALUES (?, ?, ?)
-    `);
-
     try {
-        const transaction = db.transaction(() => {
-            const info = insertClient.run(name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered ? 1 : 0, man_num, order_date, stage || 'Sin presupuesto');
-            const clientId = info.lastInsertRowid;
+        const { data: client, error: clientError } = await supabase
+            .from('clients')
+            .insert([{
+                name, address, city, zip, phone, email, offer_num, offer_date,
+                amount, ordered: ordered ? 1 : 0, man_num, order_date, stage: stage || 'Sin presupuesto'
+            }])
+            .select()
+            .single();
 
-            if (items && Array.isArray(items)) {
-                const validItems = items.filter(it => (it.description && it.description.trim() !== '') || (it.price > 0));
-                for (const item of validItems) {
-                    insertItem.run(clientId, item.description || '', item.price || 0);
-                }
+        if (clientError) throw clientError;
+
+        const clientId = client.id;
+
+        if (items && Array.isArray(items)) {
+            const validItems = items.filter(it => (it.description && it.description.trim() !== '') || (it.price > 0));
+            if (validItems.length > 0) {
+                const itemsToInsert = validItems.map(item => ({
+                    client_id: clientId,
+                    description: item.description || '',
+                    price: item.price || 0
+                }));
+                const { error: itemsError } = await supabase.from('offer_items').insert(itemsToInsert);
+                if (itemsError) throw itemsError;
             }
-            return clientId;
-        });
+        }
 
-        const clientId = transaction();
         res.status(201).send({ id: clientId, ...req.body });
     } catch (err) {
         console.error('Error adding client:', err);
@@ -63,41 +86,37 @@ router.post('/', (req, res) => {
 });
 
 // Update client
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
     const { id } = req.params;
     log(`PUT /clients/${id} - Body: ${JSON.stringify(req.body)}`);
     const { name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered, man_num, order_date, stage, items } = req.body;
 
-    console.log(`[DEBUG] Updating client ${id}. Items received:`, items ? items.length : 'none');
-
-    const updateClient = db.prepare(`
-        UPDATE clients SET name=?, address=?, city=?, zip=?, phone=?, email=?, offer_num=?, offer_date=?, amount=?, ordered=?, man_num=?, order_date=?, stage=?
-        WHERE id=?
-    `);
-
-    const deleteItems = db.prepare('DELETE FROM offer_items WHERE client_id = ?');
-    const insertItem = db.prepare('INSERT INTO offer_items (client_id, description, price) VALUES (?, ?, ?)');
-
     try {
-        const transaction = db.transaction(() => {
-            console.log(`[DEBUG] Executing transaction for client ${id}`);
-            const info = updateClient.run(name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered ? 1 : 0, man_num, order_date, stage, id);
+        const { error: updateError } = await supabase
+            .from('clients')
+            .update({
+                name, address, city, zip, phone, email, offer_num, offer_date,
+                amount, ordered: ordered ? 1 : 0, man_num, order_date, stage
+            })
+            .eq('id', id);
 
-            if (info.changes === 0) throw new Error('Client not found');
+        if (updateError) throw updateError;
 
-            if (items && Array.isArray(items)) {
-                console.log(`[DEBUG] Deleting old items for client ${id}`);
-                deleteItems.run(id);
-                const validItems = items.filter(it => (it.description && it.description.trim() !== '') || (it.price > 0));
-                console.log(`[DEBUG] Inserting ${validItems.length} valid items for client ${id}`);
-                for (const item of validItems) {
-                    insertItem.run(id, item.description || '', item.price || 0);
-                }
+        if (items && Array.isArray(items)) {
+            // Delete old items
+            await supabase.from('offer_items').delete().eq('client_id', id);
+
+            const validItems = items.filter(it => (it.description && it.description.trim() !== '') || (it.price > 0));
+            if (validItems.length > 0) {
+                const itemsToInsert = validItems.map(item => ({
+                    client_id: id,
+                    description: item.description || '',
+                    price: item.price || 0
+                }));
+                await supabase.from('offer_items').insert(itemsToInsert);
             }
-        });
+        }
 
-        transaction();
-        console.log(`[DEBUG] Transaction committed for client ${id}`);
         res.send({ id, ...req.body });
     } catch (err) {
         console.error('[ERROR] Error updating client:', err);
@@ -106,24 +125,27 @@ router.put('/:id', (req, res) => {
 });
 
 // Get client items
-router.get('/:id/items', (req, res) => {
+router.get('/:id/items', async (req, res) => {
     const { id } = req.params;
-    const items = db.prepare('SELECT * FROM offer_items WHERE client_id = ?').all(id);
-    res.send(items);
+    const { data: items, error } = await supabase.from('offer_items').select('*').eq('client_id', id);
+    if (error) return res.status(500).send(error);
+    res.send(items || []);
 });
 
 // Update client stage (for drag & drop)
-router.patch('/:id/stage', (req, res) => {
+router.patch('/:id/stage', async (req, res) => {
     const { id } = req.params;
     const { stage } = req.body;
-    db.prepare('UPDATE clients SET stage = ? WHERE id = ?').run(stage, id);
+    const { error } = await supabase.from('clients').update({ stage }).eq('id', id);
+    if (error) return res.status(500).send(error);
     res.send({ id, stage });
 });
 
 // Delete client
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
     const { id } = req.params;
-    db.prepare('DELETE FROM clients WHERE id = ?').run(id);
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    if (error) return res.status(500).send(error);
     res.status(204).send();
 });
 
