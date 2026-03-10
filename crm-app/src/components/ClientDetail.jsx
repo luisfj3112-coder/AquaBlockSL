@@ -44,22 +44,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         }
     }, [client]);
 
-    const updateAmount = (currentItems, currentWorkItems) => {
-        const offerTotal = currentItems.reduce((sum, item) => sum + (parseFloat(item.price) * 1.21 || 0), 0);
-        const workTotal = currentWorkItems.reduce((sum, item) => {
-            const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
-            const matPrice = parseFloat(item.material_price) || 0;
-            return sum + hoursPrice + matPrice;
-        }, 0);
+    useEffect(() => {
+        // Recalcular total cada vez que cambien los items o los trabajos
+        const offerTotal = items.reduce((sum, item) => sum + (parseFloat(item.price) * 1.21 || 0), 0);
+        let workTotal = 0;
+        if (showWorkTable) {
+            workTotal = workItems.reduce((sum, item) => {
+                const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                const matPrice = parseFloat(item.material_price) || 0;
+                return sum + hoursPrice + matPrice;
+            }, 0);
+        }
         setFormData(prev => ({ ...prev, amount: offerTotal + workTotal }));
-    };
+    }, [items, workItems, showWorkTable]);
 
     const fetchItems = async (clientId) => {
         try {
             const { data } = await api.get(`/clients/${clientId}/items`);
             if (data.length > 0) {
                 setItems(data);
-                updateAmount(data, workItems);
             } else {
                 setItems([{ description: '', price: '' }]);
             }
@@ -74,7 +77,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             if (data.length > 0) {
                 setWorkItems(data);
                 setShowWorkTable(true);
-                updateAmount(items, data);
             }
         } catch (err) {
             console.error('Error fetching work items', err);
@@ -114,7 +116,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         });
 
         setItems(newItems);
-        updateAmount(newItems, workItems);
     };
 
     const handleWorkItemChange = (index, field, value) => {
@@ -128,37 +129,29 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             return item;
         });
         setWorkItems(newWorkItems);
-        updateAmount(items, newWorkItems);
     };
 
     const addItem = () => {
-        const newItems = [...items, { description: '', price: '' }];
-        setItems(newItems);
+        setItems([...items, { description: '', price: '' }]);
     };
 
     const addWorkItem = () => {
-        const newWorkItems = [...workItems, { hours: '', material_description: '', material_price: '' }];
-        setWorkItems(newWorkItems);
+        setWorkItems([...workItems, { hours: '', material_description: '', material_price: '' }]);
     };
 
     const removeItem = (index) => {
         if (items.length <= 1) return;
-        const newItems = items.filter((_, i) => i !== index);
-        setItems(newItems);
-        updateAmount(newItems, workItems);
+        setItems(items.filter((_, i) => i !== index));
     };
 
     const removeWorkItem = (index) => {
         const newWorkItems = workItems.filter((_, i) => i !== index);
         if (newWorkItems.length === 0) {
             setShowWorkTable(false);
-            const resetWork = [{ hours: '', material_description: '', material_price: '' }];
-            setWorkItems(resetWork);
-            updateAmount(items, resetWork);
+            setWorkItems([{ hours: '', material_description: '', material_price: '' }]);
             return;
         }
         setWorkItems(newWorkItems);
-        updateAmount(items, newWorkItems);
     };
 
     const handleSubmit = async (e) => {
