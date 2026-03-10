@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2, Upload, Plus, FileText } from 'lucide-react';
+import { X, Save, Trash2, Upload, Plus, FileText, Camera } from 'lucide-react';
 import api from '../api/api';
 import axios from 'axios';
 
@@ -442,8 +442,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                 gap: '8px'
                             }}>
                                 <Plus size={24} />
-                                <span style={{ fontSize: '12px' }}>Subir fotos</span>
+                                <span style={{ fontSize: '12px', textAlign: 'center' }}>Subir fotos</span>
                                 <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+                            </label>
+
+                            <label style={{
+                                aspectRatio: '1/1',
+                                border: '2px dashed var(--border-color)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: 'var(--text-secondary)',
+                                gap: '8px'
+                            }}>
+                                <Camera size={24} />
+                                <span style={{ fontSize: '12px', textAlign: 'center' }}>Hacer foto</span>
+                                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleImageUpload} />
                             </label>
                         </div>
                     </div>
