@@ -352,13 +352,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             <input
                                 name="amount"
                                 type="text"
-                                value={formData.displayAmount !== undefined ? formData.displayAmount : (formData.amount || 0).toFixed(2).replace('.', ',')}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9.,]/g, '');
-                                    const cleanVal = val.replace(',', '.');
-                                    setFormData(prev => ({ ...prev, amount: parseFloat(cleanVal) || 0, displayAmount: val }));
-                                }}
-                                style={{ background: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--accent-color)' }}
+                                value={(formData.amount || 0).toFixed(2).replace('.', ',')}
+                                readOnly={true}
+                                style={{ background: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--accent-color)', cursor: 'not-allowed' }}
                                 placeholder="0,00"
                             />
                         </div>
