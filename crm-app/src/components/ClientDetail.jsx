@@ -164,7 +164,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 material_price: parseFloat(it.material_price) || 0
             }));
 
-            const payload = { ...formData, items: parsedItems, workItems: parsedWork };
+            // Recalcular total exacto antes de enviar para evitar desincronización
+            const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21), 0);
+            let workTotal = 0;
+            if (showWorkTable) {
+                workTotal = parsedWork.reduce((sum, item) => {
+                    const hoursPrice = (item.hours || 0) * 25 * 1.21;
+                    const matPrice = item.material_price || 0;
+                    return sum + hoursPrice + matPrice;
+                }, 0);
+            }
+            const finalAmount = offerTotal + workTotal;
+
+            const payload = {
+                ...formData,
+                amount: finalAmount,
+                items: parsedItems,
+                workItems: parsedWork
+            };
+
             let savedClientId = null;
 
             if (client && client.id) {
