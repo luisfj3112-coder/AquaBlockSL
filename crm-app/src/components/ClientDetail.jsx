@@ -20,8 +20,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         stage: 'Sin presupuesto'
     });
 
-    const [items, setItems] = useState([{ description: '', price: 0 }]);
+    const [items, setItems] = useState([{ description: '', price: '' }]);
     const [images, setImages] = useState([]);
+    const [pendingFiles, setPendingFiles] = useState([]);
+    const [pendingPreviews, setPendingPreviews] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
 
@@ -45,10 +47,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             if (data.length > 0) {
                 setItems(data);
                 // Sync amount with items
-                const total = data.reduce((sum, item) => sum + (item.price * 1.21), 0);
+                const total = data.reduce((sum, item) => sum + (parseFloat(item.price) * 1.21 || 0), 0);
                 setFormData(prev => ({ ...prev, amount: total }));
             } else {
-                setItems([{ description: '', price: 0 }]);
+                setItems([{ description: '', price: '' }]);
             }
         } catch (err) {
             console.error('Error fetching items', err);
@@ -74,13 +76,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
     const handleItemChange = (index, field, value) => {
         const cleanValue = typeof value === 'string' ? value.replace(',', '.') : value;
-        const numValue = parseFloat(cleanValue) || 0;
+        const numValue = cleanValue === '' ? '' : parseFloat(cleanValue) || 0;
 
         const newItems = items.map((item, i) => {
             if (i === index) {
                 if (field === 'rowTotal') {
                     // Back-calculate price from total: price = total / 1.21
-                    const newPrice = numValue / 1.21;
+                    const newPrice = numValue === '' ? '' : numValue / 1.21;
                     return { ...item, price: newPrice, rowTotal: value };
                 }
                 return { ...item, [field]: field === 'price' ? numValue : value, priceStr: field === 'price' ? value : item.priceStr };
@@ -92,14 +94,14 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
         // Update total amount automatically
         const total = newItems.reduce((sum, item) => {
-            const itemPrice = item.price || 0;
+            const itemPrice = parseFloat(item.price) || 0;
             return sum + (itemPrice * 1.21);
         }, 0);
         setFormData(prev => ({ ...prev, amount: total }));
     };
 
     const addItem = () => {
-        setItems([...items, { description: '', price: 0 }]);
+        setItems([...items, { description: '', price: '' }]);
     };
 
     const removeItem = (index) => {
@@ -107,19 +109,36 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         const newItems = items.filter((_, i) => i !== index);
         setItems(newItems);
 
-        const total = newItems.reduce((sum, item) => sum + (item.price * 1.21), 0);
+        const total = newItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * 1.21), 0);
         setFormData(prev => ({ ...prev, amount: total }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const payload = { ...formData, items };
+            const parsedItems = items.map(it => ({ ...it, price: parseFloat(it.price) || 0 }));
+            const payload = { ...formData, items: parsedItems };
+            let savedClientId = null;
+
             if (client && client.id) {
                 await api.put(`/clients/${client.id}`, payload);
+                savedClientId = client.id;
             } else {
-                await api.post('/clients', payload);
+                const res = await api.post('/clients', payload);
+                savedClientId = res.data.id;
             }
+
+            // Subir imágenes pendientes si hay
+            if (pendingFiles.length > 0 && savedClientId) {
+                const fd = new FormData();
+                for (let i = 0; i < pendingFiles.length; i++) {
+                    fd.append('photos', pendingFiles[i]);
+                }
+                await api.post(`/images/${savedClientId}`, fd, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            }
+
             onSave();
         } catch (err) {
             console.error('Error saving client', err);
@@ -127,40 +146,53 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     };
 
     const handleImageUpload = async (e) => {
-        if (!client) {
-            alert('Guarde el cliente antes de subir imágenes');
-            return;
-        }
-        const files = e.target.files;
-        if (!files || files.length === 0) return;
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
 
-        const fd = new FormData();
-        for (let i = 0; i < files.length; i++) {
-            fd.append('photos', files[i]);
-        }
+        if (client && client.id) {
+            const fd = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                fd.append('photos', files[i]);
+            }
 
-        setUploading(true);
-        try {
-            await api.post(`/images/${client.id}`, fd, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            fetchImages(client.id);
-            if (onRefresh) onRefresh();
-        } catch (err) {
-            console.error('Error uploading images', err);
-        } finally {
-            setUploading(false);
+            setUploading(true);
+            try {
+                await api.post(`/images/${client.id}`, fd, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                fetchImages(client.id);
+                if (onRefresh) onRefresh();
+            } catch (err) {
+                console.error('Error uploading images', err);
+            } finally {
+                setUploading(false);
+            }
+        } else {
+            // Cliente nuevo, guardar en previsualización
+            setPendingFiles(prev => [...prev, ...files]);
+            const previews = files.map(file => ({
+                id: Math.random().toString(),
+                isPending: true,
+                file: file,
+                url: URL.createObjectURL(file)
+            }));
+            setPendingPreviews(prev => [...prev, ...previews]);
         }
     };
 
-    const handleDeleteImage = async (imageId) => {
+    const handleDeleteImage = async (image, isPending = false) => {
         if (!window.confirm('¿Eliminar esta imagen?')) return;
-        try {
-            await api.delete(`/images/${imageId}`);
-            setImages(images.filter(img => img.id !== imageId));
-            if (onRefresh) onRefresh();
-        } catch (err) {
-            console.error('Error deleting image', err);
+        if (isPending) {
+            setPendingFiles(prev => prev.filter(f => f !== image.file));
+            setPendingPreviews(prev => prev.filter(p => p.id !== image.id));
+        } else {
+            try {
+                await api.delete(`/images/${image.id}`);
+                setImages(images.filter(img => img.id !== image.id));
+                if (onRefresh) onRefresh();
+            } catch (err) {
+                console.error('Error deleting image', err);
+            }
         }
     };
 
@@ -192,8 +224,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 importe_total: formData.amount,
                 items: JSON.stringify(items.map(item => ({
                     descripcion: item.description,
-                    precio: item.price,
-                    total: (item.price * 1.21).toFixed(2)
+                    precio: parseFloat(item.price) || 0,
+                    total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
                 })))
             };
 
@@ -204,6 +236,15 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             alert('Error al enviar la oferta');
         }
     };
+
+    const allImages = [
+        ...images.map(img => ({
+            ...img,
+            url: `https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img.filename)}`,
+            isPending: false
+        })),
+        ...pendingPreviews
+    ];
 
     return (
         <div className="modal-overlay">
@@ -308,25 +349,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                             <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
                                                 <input
                                                     type="text"
-                                                    value={item.priceStr !== undefined ? item.priceStr : (item.price || 0).toString().replace('.', ',')}
+                                                    value={item.priceStr !== undefined ? item.priceStr : (item.price === '' ? '' : (item.price || 0).toString().replace('.', ','))}
                                                     onChange={(e) => {
                                                         const val = e.target.value.replace(/[^0-9.,]/g, '');
                                                         handleItemChange(idx, 'price', val);
                                                     }}
                                                     style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', color: 'var(--text-primary)' }}
-                                                    placeholder="0,00"
+                                                    placeholder=""
                                                 />
                                             </td>
                                             <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                                                {(item.price * 0.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                                {((parseFloat(item.price) || 0) * 0.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                                             </td>
                                             <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
                                                 <input
                                                     type="text"
-                                                    value={item.rowTotal !== undefined ? item.rowTotal : (item.price * 1.21).toFixed(2).replace('.', ',')}
+                                                    value={item.rowTotal !== undefined ? item.rowTotal : item.price === '' ? '' : ((parseFloat(item.price) || 0) * 1.21).toFixed(2).replace('.', ',')}
                                                     onChange={(e) => handleItemChange(idx, 'rowTotal', e.target.value)}
                                                     style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', fontWeight: '600', color: 'var(--text-primary)' }}
-                                                    placeholder="0,00"
+                                                    placeholder=""
                                                 />
                                             </td>
                                             <td style={{ padding: '4px', textAlign: 'center' }}>
@@ -363,51 +404,49 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         </div>
                     </div>
 
-                    {client && client.id && (
-                        <div style={{ marginTop: '30px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-                            <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                Imágenes de la instalación
-                                {uploading && <span style={{ fontSize: '12px', color: 'var(--accent-color)' }}>Subiendo...</span>}
-                            </h3>
+                    <div style={{ marginTop: '30px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            Imágenes de la instalación
+                            {uploading && <span style={{ fontSize: '12px', color: 'var(--accent-color)' }}>Subiendo...</span>}
+                        </h3>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
-                                {images.map(img => (
-                                    <div key={img.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
-                                        <img
-                                            src={`https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img.filename)}`}
-                                            alt="Instalación"
-                                            onClick={() => setSelectedImage(`https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img.filename)}`)}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteImage(img.id); }}
-                                            style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '4px', borderRadius: '4px' }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                ))}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
+                            {allImages.map(img => (
+                                <div key={img.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                                    <img
+                                        src={img.url}
+                                        alt="Instalación"
+                                        onClick={() => setSelectedImage(img.url)}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteImage(img, img.isPending); }}
+                                        style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '4px', borderRadius: '4px' }}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            ))}
 
-                                <label style={{
-                                    aspectRatio: '1/1',
-                                    border: '2px dashed var(--border-color)',
-                                    borderRadius: '8px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    color: 'var(--text-secondary)',
-                                    gap: '8px'
-                                }}>
-                                    <Plus size={24} />
-                                    <span style={{ fontSize: '12px' }}>Subir fotos</span>
-                                    <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
-                                </label>
-                            </div>
+                            <label style={{
+                                aspectRatio: '1/1',
+                                border: '2px dashed var(--border-color)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: 'var(--text-secondary)',
+                                gap: '8px'
+                            }}>
+                                <Plus size={24} />
+                                <span style={{ fontSize: '12px' }}>Subir fotos</span>
+                                <input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+                            </label>
                         </div>
-                    )}
+                    </div>
                 </form>
 
                 <footer className="modal-footer">
@@ -420,15 +459,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             <Trash2 size={18} /> Eliminar Cliente
                         </button>
                     )}
-                    {client && client.id && (
-                        <button
-                            type="button"
-                            onClick={handleGenerateOffer}
-                            style={{ background: 'var(--success-color)', color: 'white', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}
-                        >
-                            <FileText size={18} /> Generar Oferta
-                        </button>
-                    )}
+                    <button
+                        type="button"
+                        onClick={handleGenerateOffer}
+                        style={{ background: 'var(--success-color)', color: 'white', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}
+                    >
+                        <FileText size={18} /> Generar Oferta
+                    </button>
                     <button
                         type="button"
                         onClick={onClose}
