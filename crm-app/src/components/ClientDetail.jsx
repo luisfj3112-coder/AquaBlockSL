@@ -21,6 +21,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     });
 
     const [items, setItems] = useState([{ description: '', price: '' }]);
+    const [workItems, setWorkItems] = useState([{ hours: '', material_description: '', material_price: '' }]);
+    const [showWorkTable, setShowWorkTable] = useState(false);
     const [images, setImages] = useState([]);
     const [pendingFiles, setPendingFiles] = useState([]);
     const [pendingPreviews, setPendingPreviews] = useState([]);
@@ -37,6 +39,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             if (client.id) {
                 fetchImages(client.id);
                 fetchItems(client.id);
+                fetchWorkItems(client.id);
             }
         }
     }, [client]);
@@ -54,6 +57,18 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             }
         } catch (err) {
             console.error('Error fetching items', err);
+        }
+    };
+
+    const fetchWorkItems = async (clientId) => {
+        try {
+            const { data } = await api.get(`/clients/${clientId}/work`);
+            if (data.length > 0) {
+                setWorkItems(data);
+                setShowWorkTable(true);
+            }
+        } catch (err) {
+            console.error('Error fetching work items', err);
         }
     };
 
@@ -100,8 +115,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         setFormData(prev => ({ ...prev, amount: total }));
     };
 
+    const handleWorkItemChange = (index, field, value) => {
+        const cleanValue = typeof value === 'string' ? value.replace(',', '.') : value;
+        const numValue = cleanValue === '' ? '' : parseFloat(cleanValue) || 0;
+
+        const newWorkItems = workItems.map((item, i) => {
+            if (i === index) {
+                return { ...item, [field]: field === 'hours' || field === 'material_price' ? numValue : value, [`${field}Str`]: value };
+            }
+            return item;
+        });
+        setWorkItems(newWorkItems);
+    };
+
     const addItem = () => {
         setItems([...items, { description: '', price: '' }]);
+    };
+
+    const addWorkItem = () => {
+        setWorkItems([...workItems, { hours: '', material_description: '', material_price: '' }]);
     };
 
     const removeItem = (index) => {
@@ -113,11 +145,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         setFormData(prev => ({ ...prev, amount: total }));
     };
 
+    const removeWorkItem = (index) => {
+        if (workItems.length <= 1) {
+            setShowWorkTable(false);
+            return;
+        }
+        setWorkItems(workItems.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const parsedItems = items.map(it => ({ ...it, price: parseFloat(it.price) || 0 }));
-            const payload = { ...formData, items: parsedItems };
+            const parsedWork = workItems.map(it => ({
+                ...it,
+                hours: parseFloat(it.hours) || 0,
+                material_price: parseFloat(it.material_price) || 0
+            }));
+
+            const payload = { ...formData, items: parsedItems, workItems: parsedWork };
             let savedClientId = null;
 
             if (client && client.id) {
@@ -226,6 +272,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                     descripcion: item.description,
                     precio: parseFloat(item.price) || 0,
                     total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
+                }))),
+                work_items: JSON.stringify(workItems.map(item => ({
+                    horas: item.hours,
+                    precio_horas: ((parseFloat(item.hours) || 0) * 25 * 1.21).toFixed(2),
+                    material: item.material_description,
+                    precio_material: item.material_price,
+                    total: (((parseFloat(item.hours) || 0) * 25 * 1.21) + (parseFloat(item.material_price) || 0)).toFixed(2)
                 })))
             };
 
@@ -401,6 +454,111 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             >
                                 <Plus size={16} /> Añadir fila
                             </button>
+
+                            {!showWorkTable && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowWorkTable(true); if (workItems.length === 0) addWorkItem(); }}
+                                    style={{
+                                        marginTop: '20px',
+                                        background: 'var(--panel-bg)',
+                                        color: 'var(--text-primary)',
+                                        border: '1px solid var(--border-color)',
+                                        width: '100%',
+                                        padding: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    <Plus size={18} /> Incluir obra
+                                </button>
+                            )}
+
+                            {showWorkTable && (
+                                <div style={{ marginTop: '20px' }}>
+                                    <h3 style={{ fontSize: '15px', color: 'var(--accent-color)', marginBottom: '10px' }}>Obra</h3>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                        <thead>
+                                            <tr style={{ background: '#333', color: 'white' }}>
+                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #555' }}>Horas</th>
+                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #555' }}>Material</th>
+                                                <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #555', width: '150px' }}>Total</th>
+                                                <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {workItems.map((item, idx) => {
+                                                const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                                                const matPrice = parseFloat(item.material_price) || 0;
+                                                const total = hoursPrice + matPrice;
+                                                return (
+                                                    <tr key={idx}>
+                                                        <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                            <div style={{ display: 'flex' }}>
+                                                                <input
+                                                                    value={item.hoursStr !== undefined ? item.hoursStr : (item.hours === '' ? '' : item.hours)}
+                                                                    onChange={(e) => handleWorkItemChange(idx, 'hours', e.target.value)}
+                                                                    style={{ width: '50%', border: 'none', background: 'transparent', padding: '8px', borderRight: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                                    placeholder="H"
+                                                                />
+                                                                <div style={{ width: '50%', padding: '8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '12px', alignSelf: 'center' }}>
+                                                                    {hoursPrice.toFixed(2)}€
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                            <div style={{ display: 'flex' }}>
+                                                                <input
+                                                                    value={item.material_description}
+                                                                    onChange={(e) => handleWorkItemChange(idx, 'material_description', e.target.value)}
+                                                                    style={{ width: '60%', border: 'none', background: 'transparent', padding: '8px', borderRight: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                                                                    placeholder="Material..."
+                                                                />
+                                                                <input
+                                                                    value={item.material_priceStr !== undefined ? item.material_priceStr : (item.material_price === '' ? '' : item.material_price)}
+                                                                    onChange={(e) => handleWorkItemChange(idx, 'material_price', e.target.value)}
+                                                                    style={{ width: '40%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', color: 'var(--text-primary)' }}
+                                                                    placeholder="€"
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                                                            {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                                        </td>
+                                                        <td style={{ padding: '4px', textAlign: 'center' }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeWorkItem(idx)}
+                                                                style={{ background: 'transparent', color: 'var(--error-color)', padding: '4px' }}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                    <button
+                                        type="button"
+                                        onClick={addWorkItem}
+                                        style={{
+                                            marginTop: '8px',
+                                            background: 'transparent',
+                                            color: 'var(--text-secondary)',
+                                            border: '1px dashed var(--border-color)',
+                                            width: '100%',
+                                            padding: '6px',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        <Plus size={14} /> Añadir fila de obra
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -4,15 +4,8 @@ const supabase = require('../db');
 const fs = require('fs');
 const path = require('path');
 
-const logFile = 'C:\\Users\\Luis Relat\\Documents\\Programa_AQ\\backend\\debug.log';
 const log = (msg) => {
-    try {
-        const entry = `${new Date().toISOString()} - ${msg}\n`;
-        fs.appendFileSync(logFile, entry);
-        console.log(msg);
-    } catch (e) {
-        console.error('Logging failed:', e);
-    }
+    console.log(`${new Date().toISOString()} - ${msg}`);
 };
 
 // Get all clients
@@ -49,7 +42,7 @@ router.get('/', async (req, res) => {
 // Add new client
 router.post('/', async (req, res) => {
     log(`POST /clients - Body: ${JSON.stringify(req.body)}`);
-    const { name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered, man_num, order_date, stage, items } = req.body;
+    const { name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered, man_num, order_date, stage, items, workItems } = req.body;
 
     try {
         const { data: client, error: clientError } = await supabase
@@ -65,6 +58,7 @@ router.post('/', async (req, res) => {
 
         const clientId = client.id;
 
+        // Save offer items
         if (items && Array.isArray(items)) {
             const validItems = items.filter(it => (it.description && it.description.trim() !== '') || (it.price > 0));
             if (validItems.length > 0) {
@@ -75,6 +69,21 @@ router.post('/', async (req, res) => {
                 }));
                 const { error: itemsError } = await supabase.from('offer_items').insert(itemsToInsert);
                 if (itemsError) throw itemsError;
+            }
+        }
+
+        // Save work items
+        if (workItems && Array.isArray(workItems)) {
+            const validWork = workItems.filter(it => it.hours > 0 || (it.material_description && it.material_description.trim() !== '') || it.material_price > 0);
+            if (validWork.length > 0) {
+                const workToInsert = validWork.map(item => ({
+                    client_id: clientId,
+                    hours: parseFloat(item.hours) || 0,
+                    material_description: item.material_description || '',
+                    material_price: parseFloat(item.material_price) || 0
+                }));
+                const { error: workError } = await supabase.from('work_items').insert(workToInsert);
+                if (workError) throw workError;
             }
         }
 
@@ -89,7 +98,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     log(`PUT /clients/${id} - Body: ${JSON.stringify(req.body)}`);
-    const { name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered, man_num, order_date, stage, items } = req.body;
+    const { name, address, city, zip, phone, email, offer_num, offer_date, amount, ordered, man_num, order_date, stage, items, workItems } = req.body;
 
     try {
         const { error: updateError } = await supabase
@@ -102,10 +111,9 @@ router.put('/:id', async (req, res) => {
 
         if (updateError) throw updateError;
 
+        // Update offer items
         if (items && Array.isArray(items)) {
-            // Delete old items
             await supabase.from('offer_items').delete().eq('client_id', id);
-
             const validItems = items.filter(it => (it.description && it.description.trim() !== '') || (it.price > 0));
             if (validItems.length > 0) {
                 const itemsToInsert = validItems.map(item => ({
@@ -114,6 +122,21 @@ router.put('/:id', async (req, res) => {
                     price: item.price || 0
                 }));
                 await supabase.from('offer_items').insert(itemsToInsert);
+            }
+        }
+
+        // Update work items
+        if (workItems && Array.isArray(workItems)) {
+            await supabase.from('work_items').delete().eq('client_id', id);
+            const validWork = workItems.filter(it => it.hours > 0 || (it.material_description && it.material_description.trim() !== '') || it.material_price > 0);
+            if (validWork.length > 0) {
+                const workToInsert = validWork.map(item => ({
+                    client_id: id,
+                    hours: parseFloat(item.hours) || 0,
+                    material_description: item.material_description || '',
+                    material_price: parseFloat(item.material_price) || 0
+                }));
+                await supabase.from('work_items').insert(workToInsert);
             }
         }
 
@@ -128,6 +151,14 @@ router.put('/:id', async (req, res) => {
 router.get('/:id/items', async (req, res) => {
     const { id } = req.params;
     const { data: items, error } = await supabase.from('offer_items').select('*').eq('client_id', id);
+    if (error) return res.status(500).send(error);
+    res.send(items || []);
+});
+
+// Get client work items
+router.get('/:id/work', async (req, res) => {
+    const { id } = req.params;
+    const { data: items, error } = await supabase.from('work_items').select('*').eq('client_id', id);
     if (error) return res.status(500).send(error);
     res.send(items || []);
 });
