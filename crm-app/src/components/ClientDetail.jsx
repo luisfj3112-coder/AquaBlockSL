@@ -44,14 +44,22 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         }
     }, [client]);
 
+    const updateAmount = (currentItems, currentWorkItems) => {
+        const offerTotal = currentItems.reduce((sum, item) => sum + (parseFloat(item.price) * 1.21 || 0), 0);
+        const workTotal = currentWorkItems.reduce((sum, item) => {
+            const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+            const matPrice = parseFloat(item.material_price) || 0;
+            return sum + hoursPrice + matPrice;
+        }, 0);
+        setFormData(prev => ({ ...prev, amount: offerTotal + workTotal }));
+    };
+
     const fetchItems = async (clientId) => {
         try {
             const { data } = await api.get(`/clients/${clientId}/items`);
             if (data.length > 0) {
                 setItems(data);
-                // Sync amount with items
-                const total = data.reduce((sum, item) => sum + (parseFloat(item.price) * 1.21 || 0), 0);
-                setFormData(prev => ({ ...prev, amount: total }));
+                updateAmount(data, workItems);
             } else {
                 setItems([{ description: '', price: '' }]);
             }
@@ -66,6 +74,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             if (data.length > 0) {
                 setWorkItems(data);
                 setShowWorkTable(true);
+                updateAmount(items, data);
             }
         } catch (err) {
             console.error('Error fetching work items', err);
@@ -96,7 +105,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         const newItems = items.map((item, i) => {
             if (i === index) {
                 if (field === 'rowTotal') {
-                    // Back-calculate price from total: price = total / 1.21
                     const newPrice = numValue === '' ? '' : numValue / 1.21;
                     return { ...item, price: newPrice, rowTotal: value };
                 }
@@ -106,13 +114,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         });
 
         setItems(newItems);
-
-        // Update total amount automatically
-        const total = newItems.reduce((sum, item) => {
-            const itemPrice = parseFloat(item.price) || 0;
-            return sum + (itemPrice * 1.21);
-        }, 0);
-        setFormData(prev => ({ ...prev, amount: total }));
+        updateAmount(newItems, workItems);
     };
 
     const handleWorkItemChange = (index, field, value) => {
@@ -126,35 +128,41 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             return item;
         });
         setWorkItems(newWorkItems);
+        updateAmount(items, newWorkItems);
     };
 
     const addItem = () => {
-        setItems([...items, { description: '', price: '' }]);
+        const newItems = [...items, { description: '', price: '' }];
+        setItems(newItems);
     };
 
     const addWorkItem = () => {
-        setWorkItems([...workItems, { hours: '', material_description: '', material_price: '' }]);
+        const newWorkItems = [...workItems, { hours: '', material_description: '', material_price: '' }];
+        setWorkItems(newWorkItems);
     };
 
     const removeItem = (index) => {
         if (items.length <= 1) return;
         const newItems = items.filter((_, i) => i !== index);
         setItems(newItems);
-
-        const total = newItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * 1.21), 0);
-        setFormData(prev => ({ ...prev, amount: total }));
+        updateAmount(newItems, workItems);
     };
 
     const removeWorkItem = (index) => {
-        if (workItems.length <= 1) {
+        const newWorkItems = workItems.filter((_, i) => i !== index);
+        if (newWorkItems.length === 0) {
             setShowWorkTable(false);
+            const resetWork = [{ hours: '', material_description: '', material_price: '' }];
+            setWorkItems(resetWork);
+            updateAmount(items, resetWork);
             return;
         }
-        setWorkItems(workItems.filter((_, i) => i !== index));
+        setWorkItems(newWorkItems);
+        updateAmount(items, newWorkItems);
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         try {
             const parsedItems = items.map(it => ({ ...it, price: parseFloat(it.price) || 0 }));
             const parsedWork = workItems.map(it => ({
@@ -174,7 +182,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 savedClientId = res.data.id;
             }
 
-            // Subir imágenes pendientes si hay
             if (pendingFiles.length > 0 && savedClientId) {
                 const fd = new FormData();
                 for (let i = 0; i < pendingFiles.length; i++) {
@@ -214,7 +221,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 setUploading(false);
             }
         } else {
-            // Cliente nuevo, guardar en previsualización
             setPendingFiles(prev => [...prev, ...files]);
             const previews = files.map(file => ({
                 id: Math.random().toString(),
@@ -256,8 +262,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const handleGenerateOffer = async () => {
         try {
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
-
-            // Format data for the GET request
             const params = {
                 nombre: formData.name,
                 telefono: formData.phone,
@@ -275,7 +279,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 }))),
                 work_items: JSON.stringify(workItems.map(item => ({
                     horas: item.hours,
-                    precio_horas: ((parseFloat(item.hours) || 0) * 25 * 1.21).toFixed(2),
+                    precio_hours: ((parseFloat(item.hours) || 0) * 25 * 1.21).toFixed(2),
                     material: item.material_description,
                     precio_material: item.material_price,
                     total: (((parseFloat(item.hours) || 0) * 25 * 1.21) + (parseFloat(item.material_price) || 0)).toFixed(2)
@@ -348,7 +352,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             <input
                                 name="amount"
                                 type="text"
-                                value={formData.displayAmount !== undefined ? formData.displayAmount : (formData.amount || 0).toString().replace('.', ',')}
+                                value={formData.displayAmount !== undefined ? formData.displayAmount : (formData.amount || 0).toFixed(2).replace('.', ',')}
                                 onChange={(e) => {
                                     const val = e.target.value.replace(/[^0-9.,]/g, '');
                                     const cleanVal = val.replace(',', '.');
@@ -458,7 +462,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             {!showWorkTable && (
                                 <button
                                     type="button"
-                                    onClick={() => { setShowWorkTable(true); if (workItems.length === 0) addWorkItem(); }}
+                                    onClick={() => { setShowWorkTable(true); if (workItems.length === 1 && workItems[0].hours === '') { } else if (workItems.length === 0) addWorkItem(); }}
                                     style={{
                                         marginTop: '20px',
                                         background: 'var(--panel-bg)',
