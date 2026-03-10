@@ -21,7 +21,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     });
 
     const [items, setItems] = useState([{ description: '', price: '' }]);
-    const [workItems, setWorkItems] = useState([{ hours: '', material_description: '', material_price: '' }]);
+    const [workItems, setWorkItems] = useState([{ hours: '', materials: [{ description: '', price: '' }] }]);
     const [showWorkTable, setShowWorkTable] = useState(false);
     const [images, setImages] = useState([]);
     const [pendingFiles, setPendingFiles] = useState([]);
@@ -51,8 +51,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         if (showWorkTable) {
             workTotal = workItems.reduce((sum, item) => {
                 const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
-                const matPrice = parseFloat(item.material_price) || 0;
-                return sum + hoursPrice + matPrice;
+                const matSum = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
+                return sum + hoursPrice + matSum;
             }, 0);
         }
         setFormData(prev => ({ ...prev, amount: offerTotal + workTotal }));
@@ -75,7 +75,18 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         try {
             const { data } = await api.get(`/clients/${clientId}/work`);
             if (data.length > 0) {
-                setWorkItems(data);
+                const processed = data.map(item => {
+                    let materials = [{ description: item.material_description, price: item.material_price }];
+                    if (item.material_description && item.material_description.startsWith('JSON:')) {
+                        try {
+                            materials = JSON.parse(item.material_description.substring(5));
+                        } catch (e) {
+                            console.error("Failed to parse materials JSON", e);
+                        }
+                    }
+                    return { ...item, materials };
+                });
+                setWorkItems(processed);
                 setShowWorkTable(true);
             }
         } catch (err) {
@@ -124,7 +135,43 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
         const newWorkItems = workItems.map((item, i) => {
             if (i === index) {
-                return { ...item, [field]: field === 'hours' || field === 'material_price' ? numValue : value, [`${field}Str`]: value };
+                return { ...item, [field]: numValue, [`${field}Str`]: value };
+            }
+            return item;
+        });
+        setWorkItems(newWorkItems);
+    };
+
+    const handleMaterialChange = (workIdx, matIdx, field, value) => {
+        const newWorkItems = workItems.map((item, i) => {
+            if (i === workIdx) {
+                const newMaterials = item.materials.map((mat, j) => {
+                    if (j === matIdx) {
+                        return { ...mat, [field]: value };
+                    }
+                    return mat;
+                });
+                return { ...item, materials: newMaterials };
+            }
+            return item;
+        });
+        setWorkItems(newWorkItems);
+    };
+
+    const addWorkMaterial = (idx) => {
+        const newWorkItems = workItems.map((item, i) => {
+            if (i === idx) return { ...item, materials: [...item.materials, { description: '', price: '' }] };
+            return item;
+        });
+        setWorkItems(newWorkItems);
+    };
+
+    const removeWorkMaterial = (workIdx, matIdx) => {
+        const newWorkItems = workItems.map((item, i) => {
+            if (i === workIdx) {
+                if (item.materials.length <= 1) return item;
+                const filtered = item.materials.filter((_, j) => j !== matIdx);
+                return { ...item, materials: filtered };
             }
             return item;
         });
@@ -136,7 +183,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     };
 
     const addWorkItem = () => {
-        setWorkItems([...workItems, { hours: '', material_description: '', material_price: '' }]);
+        setWorkItems([...workItems, { hours: '', materials: [{ description: '', price: '' }] }]);
     };
 
     const removeItem = (index) => {
@@ -148,7 +195,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         const newWorkItems = workItems.filter((_, i) => i !== index);
         if (newWorkItems.length === 0) {
             setShowWorkTable(false);
-            setWorkItems([{ hours: '', material_description: '', material_price: '' }]);
+            setWorkItems([{ hours: '', materials: [{ description: '', price: '' }] }]);
             return;
         }
         setWorkItems(newWorkItems);
@@ -158,11 +205,15 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         if (e && e.preventDefault) e.preventDefault();
         try {
             const parsedItems = items.map(it => ({ ...it, price: parseFloat(it.price) || 0 }));
-            const parsedWork = workItems.map(it => ({
-                ...it,
-                hours: parseFloat(it.hours) || 0,
-                material_price: parseFloat(it.material_price) || 0
-            }));
+            const parsedWork = workItems.map(it => {
+                const matSum = it.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                return {
+                    ...it,
+                    hours: parseFloat(it.hours) || 0,
+                    material_description: 'JSON:' + JSON.stringify(it.materials),
+                    material_price: matSum
+                };
+            });
 
             // Recalcular total exacto antes de enviar para evitar desincronización
             const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21), 0);
@@ -288,13 +339,17 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                     precio: parseFloat(item.price) || 0,
                     total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
                 }))),
-                work_items: JSON.stringify(workItems.map(item => ({
-                    horas: item.hours,
-                    precio_hours: ((parseFloat(item.hours) || 0) * 25 * 1.21).toFixed(2),
-                    material: item.material_description,
-                    precio_material: item.material_price,
-                    total: (((parseFloat(item.hours) || 0) * 25 * 1.21) + (parseFloat(item.material_price) || 0)).toFixed(2)
-                })))
+                work_items: JSON.stringify(workItems.map(item => {
+                    const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                    const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                    return {
+                        horas: item.hours,
+                        precio_hours: hoursPrice.toFixed(2),
+                        materiales: item.materials,
+                        precio_material: matSum.toFixed(2),
+                        total: (hoursPrice + matSum).toFixed(2)
+                    };
+                }))
             };
 
             await axios.get(webhookUrl, { params });
@@ -503,7 +558,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                         <tbody>
                                             {workItems.map((item, idx) => {
                                                 const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
-                                                const matPrice = parseFloat(item.material_price) || 0;
+                                                const matPrice = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
                                                 const total = hoursPrice + matPrice;
                                                 return (
                                                     <tr key={idx}>
@@ -521,30 +576,49 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                                             </div>
                                                         </td>
                                                         <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                                                                <textarea
-                                                                    value={item.material_description}
-                                                                    onChange={(e) => handleWorkItemChange(idx, 'material_description', e.target.value)}
+                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                {item.materials.map((mat, mIdx) => (
+                                                                    <div key={mIdx} style={{ display: 'flex', borderBottom: mIdx < item.materials.length - 1 ? '1px solid var(--border-color)' : 'none', alignItems: 'center' }}>
+                                                                        <input
+                                                                            value={mat.description}
+                                                                            onChange={(e) => handleMaterialChange(idx, mIdx, 'description', e.target.value)}
+                                                                            style={{ width: '60%', border: 'none', background: 'transparent', padding: '6px', borderRight: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px' }}
+                                                                            placeholder="Material..."
+                                                                        />
+                                                                        <input
+                                                                            value={mat.price}
+                                                                            onChange={(e) => handleMaterialChange(idx, mIdx, 'price', e.target.value)}
+                                                                            style={{ width: '30%', border: 'none', background: 'transparent', padding: '6px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '13px' }}
+                                                                            placeholder="€"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeWorkMaterial(idx, mIdx)}
+                                                                            style={{ width: '10%', background: 'transparent', color: 'var(--error-color)', padding: '4px', display: 'flex', justifyContent: 'center' }}
+                                                                        >
+                                                                            <Trash2 size={12} />
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => addWorkMaterial(idx)}
                                                                     style={{
-                                                                        width: '60%',
+                                                                        width: '100%',
+                                                                        background: 'var(--panel-bg)',
+                                                                        padding: '2px',
+                                                                        fontSize: '11px',
+                                                                        color: 'var(--accent-color)',
                                                                         border: 'none',
-                                                                        background: 'transparent',
-                                                                        padding: '8px',
-                                                                        borderRight: '1px solid var(--border-color)',
-                                                                        color: 'var(--text-primary)',
-                                                                        minHeight: '40px',
-                                                                        fontFamily: 'inherit',
-                                                                        fontSize: 'inherit',
-                                                                        resize: 'vertical'
+                                                                        borderTop: '1px dashed var(--border-color)',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        gap: '4px'
                                                                     }}
-                                                                    placeholder="Materiales (uno por línea)..."
-                                                                />
-                                                                <input
-                                                                    value={item.material_priceStr !== undefined ? item.material_priceStr : (item.material_price === '' ? '' : item.material_price)}
-                                                                    onChange={(e) => handleWorkItemChange(idx, 'material_price', e.target.value)}
-                                                                    style={{ width: '40%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', color: 'var(--text-primary)' }}
-                                                                    placeholder="€ Total"
-                                                                />
+                                                                >
+                                                                    <Plus size={10} /> Añadir material
+                                                                </button>
                                                             </div>
                                                         </td>
                                                         <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--text-primary)' }}>
