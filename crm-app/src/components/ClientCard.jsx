@@ -44,7 +44,7 @@ const ClientCard = ({ client }) => {
                             background: 'var(--panel-bg)'
                         }}>
                             <img
-                                src={`http://localhost:5000/uploads/${encodeURIComponent(img)}`}
+                                src={`https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img)}`}
                                 alt=""
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />

@@ -374,9 +374,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                 {images.map(img => (
                                     <div key={img.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
                                         <img
-                                            src={`http://localhost:5000/uploads/${encodeURIComponent(img.filename)}`}
+                                            src={`https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img.filename)}`}
                                             alt="Instalación"
-                                            onClick={() => setSelectedImage(`http://localhost:5000/uploads/${encodeURIComponent(img.filename)}`)}
+                                            onClick={() => setSelectedImage(`https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img.filename)}`)}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                         />
                                         <button
