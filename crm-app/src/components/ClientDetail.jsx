@@ -11,7 +11,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         zip: '',
         phone: '',
         email: '',
-        offer_num: '',
+        offer_num: 'OF',
         offer_date: '',
         amount: 0,
         ordered: false,
@@ -493,10 +493,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                     <h3 style={{ fontSize: '15px', color: 'var(--accent-color)', marginBottom: '10px' }}>Obra</h3>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                         <thead>
-                                            <tr style={{ background: '#333', color: 'white' }}>
-                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #555' }}>Horas</th>
-                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #555' }}>Material</th>
-                                                <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #555', width: '150px' }}>Total</th>
+                                            <tr style={{ background: '#d71920', color: 'white' }}>
+                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Horas</th>
+                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Material</th>
+                                                <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
                                                 <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
                                             </tr>
                                         </thead>
@@ -521,18 +521,29 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                                             </div>
                                                         </td>
                                                         <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                            <div style={{ display: 'flex' }}>
-                                                                <input
+                                                            <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                                                                <textarea
                                                                     value={item.material_description}
                                                                     onChange={(e) => handleWorkItemChange(idx, 'material_description', e.target.value)}
-                                                                    style={{ width: '60%', border: 'none', background: 'transparent', padding: '8px', borderRight: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
-                                                                    placeholder="Material..."
+                                                                    style={{
+                                                                        width: '60%',
+                                                                        border: 'none',
+                                                                        background: 'transparent',
+                                                                        padding: '8px',
+                                                                        borderRight: '1px solid var(--border-color)',
+                                                                        color: 'var(--text-primary)',
+                                                                        minHeight: '40px',
+                                                                        fontFamily: 'inherit',
+                                                                        fontSize: 'inherit',
+                                                                        resize: 'vertical'
+                                                                    }}
+                                                                    placeholder="Materiales (uno por línea)..."
                                                                 />
                                                                 <input
                                                                     value={item.material_priceStr !== undefined ? item.material_priceStr : (item.material_price === '' ? '' : item.material_price)}
                                                                     onChange={(e) => handleWorkItemChange(idx, 'material_price', e.target.value)}
                                                                     style={{ width: '40%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', color: 'var(--text-primary)' }}
-                                                                    placeholder="€"
+                                                                    placeholder="€ Total"
                                                                 />
                                                             </div>
                                                         </td>
