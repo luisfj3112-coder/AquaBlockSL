@@ -13,6 +13,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         email: '',
         offer_num: 'OF',
         offer_date: '',
+        invoice_num: 'FA',
+        invoice_date: '',
         amount: 0,
         ordered: false,
         man_num: '',
@@ -325,6 +327,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         try {
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
             const params = {
+                tipo: 'oferta',
                 nombre: formData.name,
                 telefono: formData.phone,
                 email: formData.email,
@@ -357,6 +360,47 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         } catch (err) {
             console.error('Error sending offer to webhook', err);
             alert('Error al enviar la oferta');
+        }
+    };
+
+    const handleGenerateInvoice = async () => {
+        try {
+            const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
+            const params = {
+                tipo: 'factura',
+                nombre: formData.name,
+                telefono: formData.phone,
+                email: formData.email,
+                direccion: formData.address,
+                poblacion: formData.city,
+                cp: formData.zip,
+                num_factura: formData.invoice_num,
+                fecha_factura: formData.invoice_date,
+                num_oferta: formData.offer_num,
+                importe_total: formData.amount,
+                items: JSON.stringify(items.map(item => ({
+                    descripcion: item.description,
+                    precio: parseFloat(item.price) || 0,
+                    total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
+                }))),
+                work_items: JSON.stringify(workItems.map(item => {
+                    const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                    const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                    return {
+                        horas: item.hours,
+                        precio_hours: hoursPrice.toFixed(2),
+                        materiales: item.materials,
+                        precio_material: matSum.toFixed(2),
+                        total: (hoursPrice + matSum).toFixed(2)
+                    };
+                }))
+            };
+
+            await axios.get(webhookUrl, { params });
+            alert('Factura enviada correctamente');
+        } catch (err) {
+            console.error('Error sending invoice to webhook', err);
+            alert('Error al enviar la factura');
         }
     };
 
@@ -412,6 +456,14 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         <div className="form-group">
                             <label>Fecha de Oferta</label>
                             <input name="offer_date" type="date" value={formData.offer_date} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Número de Factura</label>
+                            <input name="invoice_num" value={formData.invoice_num} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Fecha de Factura</label>
+                            <input name="invoice_date" type="date" value={formData.invoice_date} onChange={handleChange} />
                         </div>
                         <div className="form-group">
                             <label>Importe Total (€)</label>
@@ -736,6 +788,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         style={{ background: 'var(--success-color)', color: 'white', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}
                     >
                         <FileText size={18} /> Generar Oferta
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleGenerateInvoice}
+                        style={{ background: '#24292f', color: 'white', border: '1px solid var(--border-color)', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px', borderRadius: '4px' }}
+                    >
+                        <FileText size={18} /> Generar Factura
                     </button>
                     <button
                         type="button"
