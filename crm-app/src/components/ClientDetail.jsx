@@ -325,6 +325,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
     const handleGenerateOffer = async () => {
         try {
+            const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
+            const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
+            const totalFilas = filteredItems.length + filteredWork.length;
+
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
             const params = {
                 tipo: 'oferta',
@@ -337,18 +341,19 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 num_oferta: formData.offer_num,
                 fecha_oferta: formData.offer_date,
                 importe_total: formData.amount,
-                items: JSON.stringify(items.map(item => ({
+                total_filas: totalFilas,
+                items: JSON.stringify(filteredItems.map(item => ({
                     descripcion: item.description,
                     precio: parseFloat(item.price) || 0,
                     total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
                 }))),
-                work_items: JSON.stringify(workItems.map(item => {
+                work_items: JSON.stringify(filteredWork.map(item => {
                     const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
                     const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
                     return {
                         horas: item.hours,
                         precio_hours: hoursPrice.toFixed(2),
-                        materiales: item.materials,
+                        materiales: item.materials.filter(m => m.description.trim() !== ''),
                         precio_material: matSum.toFixed(2),
                         total: (hoursPrice + matSum).toFixed(2)
                     };
@@ -365,6 +370,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
     const handleGenerateInvoice = async () => {
         try {
+            const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
+            const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
+            const totalFilas = filteredItems.length + filteredWork.length;
+
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
             const params = {
                 tipo: 'factura',
@@ -378,18 +387,19 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 fecha_factura: formData.invoice_date,
                 num_oferta: formData.offer_num,
                 importe_total: formData.amount,
-                items: JSON.stringify(items.map(item => ({
+                total_filas: totalFilas,
+                items: JSON.stringify(filteredItems.map(item => ({
                     descripcion: item.description,
                     precio: parseFloat(item.price) || 0,
                     total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
                 }))),
-                work_items: JSON.stringify(workItems.map(item => {
+                work_items: JSON.stringify(filteredWork.map(item => {
                     const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
                     const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
                     return {
                         horas: item.hours,
                         precio_hours: hoursPrice.toFixed(2),
-                        materiales: item.materials,
+                        materiales: item.materials.filter(m => m.description.trim() !== ''),
                         precio_material: matSum.toFixed(2),
                         total: (hoursPrice + matSum).toFixed(2)
                     };
