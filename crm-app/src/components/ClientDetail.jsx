@@ -346,9 +346,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
     const handleDeleteClient = async () => {
         if (!client) return;
-        if (!window.confirm(\`¿Seguro que desea eliminar a "\${client.name}"?\`)) return;
+        if (!window.confirm(`¿Seguro que desea eliminar a "${client.name}"?`)) return;
         try {
-            await api.delete(\`/clients/\${client.id}\`);
+            await api.delete(`/clients/${client.id}`);
             onSave();
         } catch (err) {
             console.error('Error deleting client', err);
@@ -449,7 +449,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const allImages = [
         ...images.map(img => ({
             ...img,
-            url: \`https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/\${encodeURIComponent(img.filename)}\`,
+            url: `https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img.filename)}`,
             isPending: false
         })),
         ...pendingPreviews
