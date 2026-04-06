@@ -541,7 +541,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
                                     <tr style={{ background: '#d71920', color: 'white' }}>
-                                        <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9', minWidth: '400px' }}>Descripción</th>
+                                        <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9', minWidth: '320px' }}>Descripción</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Ancho</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Alto</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Mástiles</th>
@@ -572,6 +572,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                             </td>
                                             <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
                                                 <input
+                                                    type="number"
+                                                    step="0.5"
                                                     value={item.medidas_alto !== undefined && item.medidas_alto !== null ? item.medidas_alto : ''}
                                                     onChange={(e) => handleItemChange(idx, 'medidas_alto', e.target.value)}
                                                     style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
