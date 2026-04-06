@@ -541,7 +541,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
                                     <tr style={{ background: '#d71920', color: 'white' }}>
-                                        <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9' }}>Descripción</th>
+                                        <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9', minWidth: '400px' }}>Descripción</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Ancho</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Alto</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Mástiles</th>
