@@ -143,8 +143,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         else if (a <= 2.4) basePrice = 742.52;
                         else if (a <= 3.0) basePrice = 928.15;
                         else if (a <= 3.6) basePrice = 1113.78;
-                        else if (a <= 4.2) basePrice = 1299.41;
-                        else basePrice = 1485.04;
+                        else if (a <= 4.7) basePrice = 1299.41;
+                        else basePrice = 1485.05;
 
                         const hValid = h >= 0.5 ? h : 0;
                         const moduleLayers = hValid > 0 ? hValid / 0.5 : 0;
