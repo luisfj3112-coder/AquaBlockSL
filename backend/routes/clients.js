@@ -65,9 +65,9 @@ router.post('/', async (req, res) => {
                 const itemsToInsert = validItems.map(item => ({
                     client_id: clientId,
                     description: item.description || '',
-                    medidas_ancho: parseFloat(item.medidas_ancho) || null,
-                    medidas_alto: parseFloat(item.medidas_alto) || null,
-                    price: parseFloat(item.price) || 0
+                    medidas_ancho: item.medidas_ancho || null,
+                    medidas_alto: item.medidas_alto || null,
+                    price: item.price || 0
                 }));
                 const { error: itemsError } = await supabase.from('offer_items').insert(itemsToInsert);
                 if (itemsError) throw itemsError;
@@ -121,9 +121,9 @@ router.put('/:id', async (req, res) => {
                 const itemsToInsert = validItems.map(item => ({
                     client_id: id,
                     description: item.description || '',
-                    medidas_ancho: parseFloat(item.medidas_ancho) || null,
-                    medidas_alto: parseFloat(item.medidas_alto) || null,
-                    price: parseFloat(item.price) || 0
+                    medidas_ancho: item.medidas_ancho || null,
+                    medidas_alto: item.medidas_alto || null,
+                    price: item.price || 0
                 }));
                 await supabase.from('offer_items').insert(itemsToInsert);
             }
