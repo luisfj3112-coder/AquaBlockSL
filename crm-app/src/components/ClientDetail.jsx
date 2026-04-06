@@ -31,7 +31,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const [uploading, setUploading] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
 
-
     useEffect(() => {
         if (client) {
             setFormData(prev => ({
@@ -48,7 +47,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     }, [client]);
 
     useEffect(() => {
-        // Recalcular total cada vez que cambien los items o los trabajos
         const offerTotal = items.reduce((sum, item) => sum + (parseFloat(item.price) * 1.21 || 0), 0);
         let workTotal = 0;
         if (showWorkTable) {
@@ -252,7 +250,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 };
             });
 
-            // Recalcular total exacto antes de enviar para evitar desincronización
             const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21), 0);
             let workTotal = 0;
             if (showWorkTable) {
@@ -349,9 +346,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
     const handleDeleteClient = async () => {
         if (!client) return;
-        if (!window.confirm(`¿Seguro que desea eliminar a "${client.name}"?`)) return;
+        if (!window.confirm(\`¿Seguro que desea eliminar a "\${client.name}"?\`)) return;
         try {
-            await api.delete(`/clients/${client.id}`);
+            await api.delete(\`/clients/\${client.id}\`);
             onSave();
         } catch (err) {
             console.error('Error deleting client', err);
@@ -452,7 +449,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const allImages = [
         ...images.map(img => ({
             ...img,
-            url: `https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/${encodeURIComponent(img.filename)}`,
+            url: \`https://zihdvtkxlufsnzteuhhi.supabase.co/storage/v1/object/public/images/\${encodeURIComponent(img.filename)}\`,
             isPending: false
         })),
         ...pendingPreviews
@@ -463,8 +460,188 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             <div className="modal-content glass">
                 <header className="modal-header">
                     <h2 style={{ fontSize: '18px' }}>{client && client.id ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
-                    
-                            
+                    <button onClick={onClose} style={{ background: 'transparent', color: 'var(--text-secondary)' }}>
+                        <X size={24} />
+                    </button>
+                </header>
+
+                <form onSubmit={handleSubmit} className="modal-body">
+                    <div className="form-grid">
+                        <div className="form-group">
+                            <label>Nombre del cliente</label>
+                            <input name="name" value={formData.name} onChange={handleChange} required />
+                        </div>
+                        <div className="form-group">
+                            <label>Teléfono</label>
+                            <input name="phone" value={formData.phone} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Email</label>
+                            <input name="email" type="email" value={formData.email} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Dirección</label>
+                            <input name="address" value={formData.address} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Población</label>
+                            <input name="city" value={formData.city} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Código Postal</label>
+                            <input name="zip" value={formData.zip} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Número de Oferta</label>
+                            <input name="offer_num" value={formData.offer_num} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Fecha de Oferta</label>
+                            <input name="offer_date" type="date" value={formData.offer_date} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Número de Factura</label>
+                            <input name="invoice_num" value={formData.invoice_num} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Fecha de Factura</label>
+                            <input name="invoice_date" type="date" value={formData.invoice_date} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Importe Total (€)</label>
+                            <input
+                                name="amount"
+                                type="text"
+                                value={(formData.amount || 0).toFixed(2).replace('.', ',')}
+                                readOnly={true}
+                                style={{ background: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--accent-color)', cursor: 'not-allowed' }}
+                                placeholder="0,00"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Pedido</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '100%' }}>
+                                <input type="checkbox" name="ordered" checked={formData.ordered} onChange={handleChange} style={{ width: '20px', height: '20px' }} />
+                                <span style={{ fontSize: '14px' }}>Sí</span>
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>Número de fabricación</label>
+                            <input name="man_num" value={formData.man_num} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Fecha de pedido</label>
+                            <input name="order_date" type="date" value={formData.order_date} onChange={handleChange} />
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '30px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <h3 style={{ fontSize: '16px', marginBottom: '16px' }}>Condiciones Particulares de la oferta</h3>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                <thead>
+                                    <tr style={{ background: '#d71920', color: 'white' }}>
+                                        <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9' }}>Descripción</th>
+                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Ancho</th>
+                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Alto</th>
+                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Mástiles</th>
+                                        <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>Precio</th>
+                                        <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>21% IVA</th>
+                                        <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
+                                        <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {items.map((item, idx) => (
+                                        <tr key={idx}>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                <input
+                                                    value={item.description}
+                                                    onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', color: 'var(--text-primary)' }}
+                                                    placeholder="Descripción del producto..."
+                                                />
+                                            </td>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
+                                                <input
+                                                    value={item.medidas_ancho !== undefined && item.medidas_ancho !== null ? item.medidas_ancho : ''}
+                                                    onChange={(e) => handleItemChange(idx, 'medidas_ancho', e.target.value)}
+                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                    placeholder="-"
+                                                />
+                                            </td>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
+                                                <input
+                                                    value={item.medidas_alto !== undefined && item.medidas_alto !== null ? item.medidas_alto : ''}
+                                                    onChange={(e) => handleItemChange(idx, 'medidas_alto', e.target.value)}
+                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                    placeholder="-"
+                                                />
+                                            </td>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
+                                                <input
+                                                    value={item.mastiles !== undefined && item.mastiles !== null ? item.mastiles : ''}
+                                                    onChange={(e) => handleItemChange(idx, 'mastiles', e.target.value)}
+                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                    placeholder="-"
+                                                />
+                                            </td>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                <input
+                                                    type="text"
+                                                    value={item.priceStr !== undefined ? item.priceStr : (item.price === '' ? '' : (item.price || 0).toString().replace('.', ','))}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                                        handleItemChange(idx, 'price', val);
+                                                    }}
+                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', color: 'var(--text-primary)' }}
+                                                    placeholder="€"
+                                                />
+                                            </td>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                                {((parseFloat(item.price) || 0) * 0.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                            </td>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                <input
+                                                    type="text"
+                                                    value={item.rowTotal !== undefined ? item.rowTotal : item.price === '' ? '' : ((parseFloat(item.price) || 0) * 1.21).toFixed(2).replace('.', ',')}
+                                                    onChange={(e) => handleItemChange(idx, 'rowTotal', e.target.value)}
+                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', fontWeight: '600', color: 'var(--text-primary)' }}
+                                                    placeholder="€"
+                                                />
+                                            </td>
+                                            <td style={{ padding: '4px', textAlign: 'center' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItem(idx)}
+                                                    style={{ background: 'transparent', color: 'var(--error-color)', padding: '4px' }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <button
+                                type="button"
+                                onClick={addItem}
+                                style={{
+                                    marginTop: '12px',
+                                    background: 'transparent',
+                                    color: 'var(--accent-color)',
+                                    border: '1px dashed var(--accent-color)',
+                                    width: '100%',
+                                    padding: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <Plus size={16} /> Añadir fila de producto
+                            </button>
+
                             {!showWorkTable && (
                                 <button
                                     type="button"
@@ -733,11 +910,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         alt="Enlarged"
                         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 20px rgba(0,0,0,0.5)' }}
                     />
-                </div>
-            )}
-             
-                        />
-                    </div>
                 </div>
             )}
         </div>
