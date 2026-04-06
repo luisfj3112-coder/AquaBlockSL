@@ -913,15 +913,18 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                     />
                 </div>
             )}
+            {showCalculator && (
+                <div style={{position: 'fixed', zIndex: 3000, top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)'}}>
+                    <div style={{maxHeight: '90vh', overflowY: 'auto'}}>
+                        <BudgetCalculator 
+                            onSave={handleCalculatorSave} 
+                            onCancel={() => setShowCalculator(false)} 
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-
-            {showCalculator && (
-                <BudgetCalculator 
-                    onSave={handleCalculatorSave} 
-                    onCancel={() => setShowCalculator(false)} 
-                />
-            )}
 export default ClientDetail;
