@@ -136,10 +136,20 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                     const h = parseFloat(field === 'medidas_alto' ? valClean : updatedItem.medidas_alto) || 0;
                     const m = parseFloat(field === 'mastiles' ? valClean : updatedItem.mastiles) || 0;
                     
-                    if (a > 0 || m > 0) {
+                    if (a > 0) {
+                        let basePrice = 0;
+                        if (a <= 1.2) basePrice = 371.26;
+                        else if (a <= 1.8) basePrice = 556.89;
+                        else if (a <= 2.4) basePrice = 742.52;
+                        else if (a <= 3.0) basePrice = 928.15;
+                        else if (a <= 3.6) basePrice = 1113.78;
+                        else if (a <= 4.2) basePrice = 1299.41;
+                        else basePrice = 1485.04;
+
                         const hValid = h >= 0.5 ? h : 0;
                         const moduleLayers = hValid > 0 ? hValid / 0.5 : 0;
-                        const totalModulesCost = moduleLayers * (a * 309.3833);
+                        const totalModulesCost = moduleLayers * basePrice;
+                        
                         let totalMastilCost = 0;
                         if (m > 0 && hValid > 0) {
                             if (hValid === 0.5) totalMastilCost = m * 54.00;
