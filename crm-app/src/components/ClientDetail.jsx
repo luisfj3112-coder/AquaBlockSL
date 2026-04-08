@@ -134,8 +134,16 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         }));
 
         // Si se cambia la fecha de factura y hay un valor, autogenerar el número
-        if (name === 'invoice_date' && value) {
-            handleGenerateInvoiceNum(value);
+        if (name === 'invoice_date') {
+            if (value) {
+                handleGenerateInvoiceNum(value);
+            } else {
+                // Si se borra la fecha, borrar el número también
+                setFormData(prev => ({
+                    ...prev,
+                    invoice_num: ''
+                }));
+            }
         }
     };
 
