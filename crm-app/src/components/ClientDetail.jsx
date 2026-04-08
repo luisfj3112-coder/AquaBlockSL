@@ -13,7 +13,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         email: '',
         offer_num: 'OF',
         offer_date: '',
-        invoice_num: 'FA',
+        invoice_num: '',
         invoice_date: '',
         amount: 0,
         ordered: false,
@@ -58,6 +58,27 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         }
         setFormData(prev => ({ ...prev, amount: offerTotal + workTotal }));
     }, [items, workItems, showWorkTable]);
+
+    const handleGenerateInvoiceNum = async (selectedDate) => {
+        try {
+            const dateParam = selectedDate ? `?date=${selectedDate}` : '';
+            const { data } = await api.get(`/clients/next-invoice-number${dateParam}`);
+            const nextInvoiceNum = data.nextInvoiceNum;
+            const updatedDate = selectedDate || new Date().toISOString().split('T')[0];
+            
+            setFormData(prev => ({
+                ...prev,
+                invoice_num: nextInvoiceNum,
+                invoice_date: updatedDate
+            }));
+            
+            return { nextInvoiceNum, todayStr: updatedDate };
+        } catch (err) {
+            console.error('Error fetching next invoice number', err);
+            alert('Error al generar el número de factura');
+            return null;
+        }
+    };
 
     const fetchItems = async (clientId) => {
         try {
@@ -106,10 +127,16 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        const finalValue = type === 'checkbox' ? checked : value;
         setFormData(prev => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : value
+            [name]: finalValue
         }));
+
+        // Si se cambia la fecha de factura y hay un valor, autogenerar el número
+        if (name === 'invoice_date' && value) {
+            handleGenerateInvoiceNum(value);
+        }
     };
 
     const handleItemChange = (index, field, value) => {
@@ -412,6 +439,20 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
     const handleGenerateInvoice = async () => {
         try {
+            let currentInvoiceNum = formData.invoice_num;
+            let currentInvoiceDate = formData.invoice_date;
+
+            if (!currentInvoiceNum || currentInvoiceNum.trim() === '') {
+                const generated = await handleGenerateInvoiceNum();
+                if (generated) {
+                    currentInvoiceNum = generated.nextInvoiceNum;
+                    currentInvoiceDate = generated.todayStr;
+                    // Note: formData state will update asynchronously, but we use local vars for immediate request
+                } else {
+                    return; // Error or cancelled
+                }
+            }
+
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
             const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
             const totalFilas = filteredItems.length + filteredWork.length;
@@ -425,8 +466,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 direccion: formData.address,
                 poblacion: formData.city,
                 cp: formData.zip,
-                num_factura: formData.invoice_num,
-                fecha_factura: formData.invoice_date,
+                num_factura: currentInvoiceNum,
+                fecha_factura: currentInvoiceDate,
                 num_oferta: formData.offer_num,
                 importe_total: formData.amount,
                 total_filas: totalFilas,
@@ -510,7 +551,26 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             <input name="offer_date" type="date" value={formData.offer_date} onChange={handleChange} />
                         </div>
                         <div className="form-group">
-                            <label>Número de Factura</label>
+                            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                Número de Factura
+                                <button 
+                                    type="button" 
+                                    onClick={handleGenerateInvoiceNum}
+                                    className="btn-tiny"
+                                    style={{ 
+                                        fontSize: '10px', 
+                                        padding: '2px 8px', 
+                                        background: 'rgba(215, 25, 32, 0.1)', 
+                                        color: '#d71920', 
+                                        border: '1px solid #d71920', 
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    Auto-generar
+                                </button>
+                            </label>
                             <input name="invoice_num" value={formData.invoice_num} onChange={handleChange} />
                         </div>
                         <div className="form-group">
