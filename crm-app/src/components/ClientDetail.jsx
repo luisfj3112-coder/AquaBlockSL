@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Trash2, Upload, Plus, FileText, Camera } from 'lucide-react';
 import api from '../api/api';
 import axios from 'axios';
+import { invoiceTemplate } from '../templates/invoiceTemplate';
 
 const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         ordered: false,
         man_num: '',
         order_date: '',
+        dni: '',
         stage: 'Sin presupuesto'
     });
 
@@ -466,38 +468,44 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const totalFilas = filteredItems.length + filteredWork.length;
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
-            const params = {
+            
+            // Procesamiento de la plantilla HTML
+            let html = invoiceTemplate;
+            html = html.replace('{{NOMBRE}}', formData.name || '');
+            html = html.replace('{{DNI}}', formData.dni || '');
+            html = html.replace('{{NUM_FACTURA}}', currentInvoiceNum);
+            html = html.replace('{{FECHA}}', currentInvoiceDate);
+            html = html.replace('{{DIRECCION}}', formData.address || '');
+            html = html.replace('{{CP_POBLACION}}', `${formData.zip || ''}, ${formData.city || ''}`);
+            
+            // Para los artículos, tomamos el primero como ejemplo (o podrías mapear más si el diseño lo permite)
+            if (filteredItems.length > 0) {
+                html = html.replace('{{ITEM_1_DESC}}', filteredItems[0].description);
+                html = html.replace('{{ITEM_1_PRECIO}}', filteredItems[0].price);
+                html = html.replace('{{ITEM_1_CANT}}', '1');
+                html = html.replace('{{ITEM_1_TOTAL}}', filteredItems[0].price);
+            }
+            
+            html = html.replace('{{SUBTOTAL}}', formData.amount.toFixed(2));
+            html = html.replace('{{TOTAL}}', formData.amount.toFixed(2));
+
+            const payload = {
                 tipo: 'factura',
-                nombre: formData.name,
-                telefono: formData.phone,
-                email: formData.email,
-                direccion: formData.address,
-                poblacion: formData.city,
-                cp: formData.zip,
                 num_factura: currentInvoiceNum,
                 fecha_factura: currentInvoiceDate,
-                num_oferta: formData.offer_num,
+                nombre_cliente: formData.name,
+                email_cliente: formData.email,
+                telefono_cliente: formData.phone,
+                direccion_cliente: formData.address,
+                poblacion_cliente: formData.city,
+                cp_cliente: formData.zip,
                 importe_total: formData.amount,
-                total_filas: totalFilas,
-                items: JSON.stringify(filteredItems.map(item => ({
-                    descripcion: item.description,
-                    precio: parseFloat(item.price) || 0,
-                    total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
-                }))),
-                work_items: JSON.stringify(filteredWork.map(item => {
-                    const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
-                    const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
-                    return {
-                        horas: item.hours,
-                        precio_hours: hoursPrice.toFixed(2),
-                        materiales: item.materials.filter(m => m.description.trim() !== ''),
-                        precio_material: matSum.toFixed(2),
-                        total: (hoursPrice + matSum).toFixed(2)
-                    };
-                }))
+                items: filteredItems,
+                work_items: filteredWork,
+                html_content: html // Enviamos el HTML procesado
             };
 
-            await axios.get(webhookUrl, { params });
+            await axios.post(webhookUrl, payload);
             alert('Factura enviada correctamente');
         } catch (err) {
             console.error('Error sending invoice to webhook', err);
