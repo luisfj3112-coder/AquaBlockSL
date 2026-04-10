@@ -484,13 +484,20 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             html = html.replace('{{DIRECCION}}', formData.address || '');
             html = html.replace('{{CP_POBLACION}}', `${formData.zip || ''}, ${formData.city || ''}`);
             
-            if (filteredItems.length > 0) {
-                html = html.replace('{{ITEM_1_DESC}}', filteredItems[0].description);
-                html = html.replace('{{ITEM_1_PRECIO}}', filteredItems[0].price);
-                html = html.replace('{{ITEM_1_CANT}}', '1');
-                html = html.replace('{{ITEM_1_TOTAL}}', filteredItems[0].price);
-            }
-            
+            // Generar filas de artículos dinámicamente
+            let itemsRowsHtml = '';
+            let currentTop = 24.96;
+            filteredItems.forEach((item) => {
+                itemsRowsHtml += `
+                    <div class="pdf24_01 pdf24_15" style="left:6.74em;top:${currentTop}em;">${item.description}</div>
+                    <div class="pdf24_01 pdf24_15" style="left:25.82em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
+                    <div class="pdf24_01 pdf24_15" style="left:34.40em;top:${currentTop}em;">1</div>
+                    <div class="pdf24_01 pdf24_15" style="left:39.49em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
+                `;
+                currentTop += 1.2; // Espaciado entre filas
+            });
+
+            html = html.replace('{{ITEMS_ROWS}}', itemsRowsHtml);
             html = html.replace('{{SUBTOTAL}}', formData.amount.toFixed(2));
             html = html.replace('{{TOTAL}}', formData.amount.toFixed(2));
 
@@ -506,17 +513,14 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 }
             };
 
-            console.log('Enviando payload al Webhook...', payload);
+            console.log('Enviando factura completa al Webhook...');
 
             const response = await axios.post(webhookUrl, payload);
             console.log('Respuesta del Webhook:', response.status);
             alert('Factura enviada correctamente');
         } catch (err) {
             console.error('Error detallado al enviar factura:', err);
-            if (err.response) {
-                console.error('Respuesta de error del servidor:', err.response.data);
-            }
-            alert('Error al enviar la factura. Revisa la consola (F12) para más detalles.');
+            alert('Error al enviar la factura. Revisa la consola para más detalles.');
         }
     };
 
