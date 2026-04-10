@@ -467,6 +467,12 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
             const totalFilas = filteredItems.length + filteredWork.length;
 
+            console.log('Generando factura con datos:', {
+                num: currentInvoiceNum,
+                nombre: formData.name,
+                items: filteredItems.length
+            });
+
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
             
             // Procesamiento de la plantilla HTML
@@ -478,7 +484,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             html = html.replace('{{DIRECCION}}', formData.address || '');
             html = html.replace('{{CP_POBLACION}}', `${formData.zip || ''}, ${formData.city || ''}`);
             
-            // Para los artículos, tomamos el primero como ejemplo (o podrías mapear más si el diseño lo permite)
             if (filteredItems.length > 0) {
                 html = html.replace('{{ITEM_1_DESC}}', filteredItems[0].description);
                 html = html.replace('{{ITEM_1_PRECIO}}', filteredItems[0].price);
@@ -493,23 +498,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 tipo: 'factura',
                 num_factura: currentInvoiceNum,
                 fecha_factura: currentInvoiceDate,
-                nombre_cliente: formData.name,
-                email_cliente: formData.email,
-                telefono_cliente: formData.phone,
-                direccion_cliente: formData.address,
-                poblacion_cliente: formData.city,
-                cp_cliente: formData.zip,
-                importe_total: formData.amount,
-                items: filteredItems,
-                work_items: filteredWork,
-                html_content: html // Enviamos el HTML procesado
+                html_content: html,
+                raw_data: {
+                    nombre_cliente: formData.name,
+                    importe_total: formData.amount,
+                    items: filteredItems
+                }
             };
 
-            await axios.post(webhookUrl, payload);
+            console.log('Enviando payload al Webhook...', payload);
+
+            const response = await axios.post(webhookUrl, payload);
+            console.log('Respuesta del Webhook:', response.status);
             alert('Factura enviada correctamente');
         } catch (err) {
-            console.error('Error sending invoice to webhook', err);
-            alert('Error al enviar la factura');
+            console.error('Error detallado al enviar factura:', err);
+            if (err.response) {
+                console.error('Respuesta de error del servidor:', err.response.data);
+            }
+            alert('Error al enviar la factura. Revisa la consola (F12) para más detalles.');
         }
     };
 
