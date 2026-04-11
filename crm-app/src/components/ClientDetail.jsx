@@ -489,10 +489,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             let currentTop = 24.96;
             filteredItems.forEach((item) => {
                 itemsRowsHtml += `
-                    <div class="pdf24_01 pdf24_15" style="left:6.74em;top:${currentTop}em;">${item.description}</div>
-                    <div class="pdf24_01 pdf24_15" style="left:25.82em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
-                    <div class="pdf24_01 pdf24_15" style="left:34.40em;top:${currentTop}em;">1</div>
-                    <div class="pdf24_01 pdf24_15" style="left:39.49em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
+                    <div class="pdf24_01 pdf24_text" style="left:6.74em;top:${currentTop}em;">${item.description}</div>
+                    <div class="pdf24_01 pdf24_text" style="left:25.82em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
+                    <div class="pdf24_01 pdf24_text" style="left:34.40em;top:${currentTop}em;">1</div>
+                    <div class="pdf24_01 pdf24_text" style="left:39.49em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
                 `;
                 currentTop += 1.2; // Espaciado entre filas
             });
