@@ -468,33 +468,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const iva = subtotal * 0.21;
             const total = subtotal + iva;
 
+            // Concatenar descripciones si hay varias
+            const descripciones = filteredItems.map(it => it.description).join(', ');
+
             const payload = {
                 tipo: 'factura',
-                invoice_details: {
-                    number: currentInvoiceNum,
-                    date: currentInvoiceDate
-                },
-                client_details: {
-                    name: formData.name,
-                    dni: formData.dni,
-                    address: formData.address,
-                    zip: formData.zip,
-                    city: formData.city
-                },
-                items: filteredItems.map(item => ({
-                    description: item.description,
-                    price_unit: parseFloat(item.price).toFixed(2),
-                    quantity: 1, // Por defecto 1 o según lógica
-                    total_item: parseFloat(item.price).toFixed(2)
-                })),
-                totals: {
-                    subtotal: subtotal.toFixed(2),
-                    iva: iva.toFixed(2),
-                    total: total.toFixed(2)
-                }
+                nombre_cliente: formData.name,
+                dni_cliente: formData.dni,
+                direccion_cliente: `${formData.address || ''}, ${formData.zip || ''}, ${formData.city || ''}`,
+                descripcion_productos: descripciones,
+                precio_unidad: subtotal.toFixed(2),
+                cantidad: 1, 
+                subtotal: subtotal.toFixed(2),
+                total_iva: iva.toFixed(2),
+                total_factura: total.toFixed(2),
+                numero_factura: currentInvoiceNum,
+                fecha_factura: currentInvoiceDate
             };
 
-            console.log('Enviando datos estructurados de factura al Webhook:', payload);
+            console.log('Enviando datos planos de factura al Webhook:', payload);
 
             const response = await axios.post(webhookUrl, payload);
             console.log('Respuesta del Webhook:', response.status);
