@@ -464,56 +464,37 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             }
 
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
-            const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
-            const totalFilas = filteredItems.length + filteredWork.length;
-
-            console.log('Generando factura con datos:', {
-                num: currentInvoiceNum,
-                nombre: formData.name,
-                items: filteredItems.length
-            });
-
-            const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
-            
-            // Procesamiento de la plantilla HTML
-            let html = invoiceTemplate;
-            html = html.replace('{{NOMBRE}}', formData.name || '');
-            html = html.replace('{{DNI}}', formData.dni || '');
-            html = html.replace('{{NUM_FACTURA}}', currentInvoiceNum);
-            html = html.replace('{{FECHA}}', currentInvoiceDate);
-            html = html.replace('{{DIRECCION}}', formData.address || '');
-            html = html.replace('{{CP_POBLACION}}', `${formData.zip || ''}, ${formData.city || ''}`);
-            
-            // Generar filas de artículos dinámicamente
-            let itemsRowsHtml = '';
-            let currentTop = 24.96;
-            filteredItems.forEach((item) => {
-                itemsRowsHtml += `
-                    <div class="pdf24_01 pdf24_text" style="left:6.74em;top:${currentTop}em;">${item.description}</div>
-                    <div class="pdf24_01 pdf24_text" style="left:25.82em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
-                    <div class="pdf24_01 pdf24_text" style="left:34.40em;top:${currentTop}em;">1</div>
-                    <div class="pdf24_01 pdf24_text" style="left:39.49em;top:${currentTop}em;">${parseFloat(item.price).toFixed(2)} €</div>
-                `;
-                currentTop += 1.2; // Espaciado entre filas
-            });
-
-            html = html.replace('{{ITEMS_ROWS}}', itemsRowsHtml);
-            html = html.replace('{{SUBTOTAL}}', formData.amount.toFixed(2));
-            html = html.replace('{{TOTAL}}', formData.amount.toFixed(2));
+            const subtotal = formData.amount;
+            const iva = subtotal * 0.21;
+            const total = subtotal + iva;
 
             const payload = {
                 tipo: 'factura',
-                num_factura: currentInvoiceNum,
-                fecha_factura: currentInvoiceDate,
-                html_content: html,
-                raw_data: {
-                    nombre_cliente: formData.name,
-                    importe_total: formData.amount,
-                    items: filteredItems
+                invoice_details: {
+                    number: currentInvoiceNum,
+                    date: currentInvoiceDate
+                },
+                client_details: {
+                    name: formData.name,
+                    dni: formData.dni,
+                    address: formData.address,
+                    zip: formData.zip,
+                    city: formData.city
+                },
+                items: filteredItems.map(item => ({
+                    description: item.description,
+                    price_unit: parseFloat(item.price).toFixed(2),
+                    quantity: 1, // Por defecto 1 o según lógica
+                    total_item: parseFloat(item.price).toFixed(2)
+                })),
+                totals: {
+                    subtotal: subtotal.toFixed(2),
+                    iva: iva.toFixed(2),
+                    total: total.toFixed(2)
                 }
             };
 
-            console.log('Enviando factura completa al Webhook...');
+            console.log('Enviando datos estructurados de factura al Webhook:', payload);
 
             const response = await axios.post(webhookUrl, payload);
             console.log('Respuesta del Webhook:', response.status);
