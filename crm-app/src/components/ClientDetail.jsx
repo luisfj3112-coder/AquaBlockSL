@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Trash2, Upload, Plus, FileText, Camera } from 'lucide-react';
 import api from '../api/api';
 import axios from 'axios';
-import { invoiceTemplate } from '../templates/invoiceTemplate';
+
 
 const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const [formData, setFormData] = useState({
@@ -467,6 +467,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const subtotal = formData.amount;
             const iva = subtotal * 0.21;
             const total = subtotal + iva;
+
+            const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
 
             // Concatenar descripciones si hay varias
             const descripciones = filteredItems.map(it => it.description).join(', ');
