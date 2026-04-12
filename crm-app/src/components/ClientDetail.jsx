@@ -53,7 +53,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         let workTotal = 0;
         if (showWorkTable) {
             workTotal = workItems.reduce((sum, item) => {
-                const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
                 const matSum = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
                 return sum + hoursPrice + matSum;
             }, 0);
@@ -301,7 +301,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             let workTotal = 0;
             if (showWorkTable) {
                 workTotal = parsedWork.reduce((sum, item) => {
-                    const hoursPrice = (item.hours || 0) * 25 * 1.21;
+                    const hoursPrice = (item.hours || 0) * 30 * 1.21;
                     const matPrice = item.material_price || 0;
                     return sum + hoursPrice + matPrice;
                 }, 0);
@@ -428,7 +428,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 }))),
                 work_items: JSON.stringify(filteredWork.map(item => {
                     const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
-                    const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                    const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
                     return {
                         horas: item.hours,
                         precio_hours: hoursPrice.toFixed(2),
@@ -491,7 +491,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 );
                 if (filteredWork.length > 0) {
                     const totalObra = filteredWork.reduce((sum, item) => {
-                        const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                        const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
                         const matSum = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
                         return sum + hoursPrice + matSum;
                     }, 0);
@@ -847,7 +847,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                     </thead>
                                     <tbody>
                                         {workItems.map((item, idx) => {
-                                            const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                                            const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
                                             const matPrice = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
                                             const total = hoursPrice + matPrice;
                                             return (
