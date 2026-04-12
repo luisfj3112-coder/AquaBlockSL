@@ -470,22 +470,28 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
 
-            // Concatenar descripciones si hay varias
-            const descripciones = filteredItems.map(it => it.description).join(', ');
+            // Construir campos de productos por separado
+            const productFields = {};
+            filteredItems.forEach((item, index) => {
+                const n = index + 1;
+                productFields[`descripcion_producto_${n}`] = item.description;
+                productFields[`precio_unidad_${n}`] = parseFloat(item.price).toFixed(2);
+                productFields[`cantidad_${n}`] = 1;
+                productFields[`total_producto_${n}`] = parseFloat(item.price).toFixed(2);
+            });
 
             const payload = {
                 tipo: 'factura',
+                numero_factura: currentInvoiceNum,
+                fecha_factura: currentInvoiceDate,
                 nombre_cliente: formData.name,
                 dni_cliente: formData.dni,
+                email_cliente: formData.email,
                 direccion_cliente: `${formData.address || ''}, ${formData.zip || ''}, ${formData.city || ''}`,
-                descripcion_productos: descripciones,
-                precio_unidad: subtotal.toFixed(2),
-                cantidad: 1, 
+                ...productFields,
                 subtotal: subtotal.toFixed(2),
                 total_iva: iva.toFixed(2),
-                total_factura: total.toFixed(2),
-                numero_factura: currentInvoiceNum,
-                fecha_factura: currentInvoiceDate
+                total_factura: total.toFixed(2)
             };
 
             console.log('Enviando datos planos de factura al Webhook:', payload);
@@ -531,6 +537,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         <div className="form-group">
                             <label>Email</label>
                             <input name="email" type="email" value={formData.email} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>DNI</label>
+                            <input name="dni" value={formData.dni} onChange={handleChange} />
                         </div>
                         <div className="form-group">
                             <label>Dirección</label>
