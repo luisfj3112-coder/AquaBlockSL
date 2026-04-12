@@ -641,7 +641,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
                     <div style={{ marginTop: '30px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
                         <h3 style={{ fontSize: '16px', marginBottom: '16px' }}>Condiciones Particulares de la oferta</h3>
-                        <div style={{ overflowX: 'auto' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0' }}>
+                            <div style={{ overflowX: 'auto', flex: 1 }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
                                      <tr style={{ background: '#d71920', color: 'white' }}>
@@ -649,7 +650,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Ancho</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Alto</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Mástiles</th>
-                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '90px' }}>Cant.</th>
                                         <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>Precio</th>
                                         <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>21% IVA</th>
                                         <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
@@ -693,21 +693,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                                     placeholder="-"
                                                 />
                                             </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '4px', textAlign: 'center' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleItemChange(idx, 'quantity', Math.max(1, (parseInt(item.quantity) || 1) - 1))}
-                                                        style={{ background: 'rgba(215,25,32,0.1)', color: '#d71920', border: '1px solid #d71920', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', lineHeight: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                                    >−</button>
-                                                    <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: 'bold' }}>{item.quantity || 1}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleItemChange(idx, 'quantity', (parseInt(item.quantity) || 1) + 1)}
-                                                        style={{ background: 'rgba(215,25,32,0.1)', color: '#d71920', border: '1px solid #d71920', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', lineHeight: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                                    >+</button>
-                                                </div>
-                                            </td>
                                             <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
                                                 <input
                                                     type="text"
@@ -739,6 +724,31 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                     ))}
                                 </tbody>
                             </table>
+                            </div>
+
+                            {/* Sidebar de cantidad, fuera de la tabla, alineada por fila */}
+                            <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '10px', flexShrink: 0 }}>
+                                {/* Espaciador para alinear con la cabecera de la tabla */}
+                                <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#d71920', borderRadius: '4px 4px 0 0', padding: '0 8px' }}>
+                                    <span style={{ color: 'white', fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Cant.</span>
+                                </div>
+                                {items.map((item, idx) => (
+                                    <div key={idx} style={{ height: '41px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', borderBottom: '1px solid var(--border-color)', padding: '0 4px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleItemChange(idx, 'quantity', Math.max(1, (parseInt(item.quantity) || 1) - 1))}
+                                            style={{ background: 'rgba(215,25,32,0.1)', color: '#d71920', border: '1px solid #d71920', borderRadius: '4px', width: '26px', height: '26px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >−</button>
+                                        <span style={{ minWidth: '22px', textAlign: 'center', fontWeight: 'bold', fontSize: '15px' }}>{item.quantity || 1}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleItemChange(idx, 'quantity', (parseInt(item.quantity) || 1) + 1)}
+                                            style={{ background: 'rgba(215,25,32,0.1)', color: '#d71920', border: '1px solid #d71920', borderRadius: '4px', width: '26px', height: '26px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >+</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                             <button
                                 type="button"
                                 onClick={addItem}
