@@ -726,64 +726,66 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             </table>
                             </div>
 
-                                       {/* Sidebar de cantidad, muy discreto y minimalista */}
-                            <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '12px', flexShrink: 0 }}>
-                                <div style={{ height: '37px' }}></div> {/* Espacio para la cabecera de la tabla */}
+                            {/* Sidebar de cantidad, vertical y muy estrecho en rojo */}
+                            <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '8px', flexShrink: 0 }}>
+                                <div style={{ height: '37px' }}></div> {/* Espacio cabecera */}
                                 {items.map((item, idx) => (
-                                    <div key={idx} style={{ height: '41px', display: 'flex', alignItems: 'center' }}>
+                                    <div key={idx} style={{ height: '41px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <div style={{ 
                                             display: 'flex', 
+                                            flexDirection: 'column',
                                             alignItems: 'center', 
                                             border: '1px solid #ddd', 
-                                            borderRadius: '4px', 
+                                            borderRadius: '3px', 
                                             overflow: 'hidden',
-                                            height: '24px',
+                                            width: '20px',
                                             background: 'white'
                                         }}>
                                             <button
                                                 type="button"
-                                                onClick={() => handleItemChange(idx, 'quantity', Math.max(1, (parseInt(item.quantity) || 1) - 1))}
-                                                style={{ 
-                                                    background: '#0070bc', 
-                                                    color: 'white', 
-                                                    border: 'none', 
-                                                    width: '24px', 
-                                                    height: '100%', 
-                                                    cursor: 'pointer', 
-                                                    fontSize: '14px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    padding: 0
-                                                }}
-                                            >−</button>
-                                            <div style={{ 
-                                                minWidth: '24px', 
-                                                textAlign: 'center', 
-                                                fontSize: '12px', 
-                                                fontWeight: 'bold', 
-                                                color: '#333',
-                                                padding: '0 4px'
-                                            }}>
-                                                {item.quantity || 1}
-                                            </div>
-                                            <button
-                                                type="button"
                                                 onClick={() => handleItemChange(idx, 'quantity', (parseInt(item.quantity) || 1) + 1)}
                                                 style={{ 
-                                                    background: '#0070bc', 
+                                                    background: '#d71920', 
                                                     color: 'white', 
                                                     border: 'none', 
-                                                    width: '24px', 
-                                                    height: '100%', 
+                                                    width: '100%', 
+                                                    height: '14px', 
                                                     cursor: 'pointer', 
-                                                    fontSize: '14px',
+                                                    fontSize: '10px',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     padding: 0
                                                 }}
                                             >+</button>
+                                            <div style={{ 
+                                                height: '14px',
+                                                lineHeight: '14px',
+                                                textAlign: 'center', 
+                                                fontSize: '10px', 
+                                                fontWeight: 'bold', 
+                                                color: '#333'
+                                            }}>
+                                                {item.quantity || 1}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleItemChange(idx, 'quantity', Math.max(1, (parseInt(item.quantity) || 1) - 1))}
+                                                style={{ 
+                                                    background: '#d71920', 
+                                                    color: 'white', 
+                                                    border: 'none', 
+                                                    width: '100%', 
+                                                    height: '14px', 
+                                                    cursor: 'pointer', 
+                                                    fontSize: '12px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    padding: 0,
+                                                    borderTop: '1px solid #ddd'
+                                                }}
+                                            >−</button>
                                         </div>
                                     </div>
                                 ))}
