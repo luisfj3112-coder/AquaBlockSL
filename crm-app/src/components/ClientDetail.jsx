@@ -847,9 +847,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                     </thead>
                                     <tbody>
                                         {workItems.map((item, idx) => {
-                                            const hVal = item.hoursStr !== undefined ? (parseFloat(item.hoursStr.replace(',', '.')) || 0) : (parseFloat(item.hours) || 0);
+                                            const hVal = parseFloat(item.hours) || 0;
                                             const hoursPrice = hVal * 30 * 1.21;
-                                            const matPrice = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                                            const matPrice = item.materials ? item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0) : 0;
                                             const total = hoursPrice + matPrice;
                                             return (
                                                 <tr key={idx}>
