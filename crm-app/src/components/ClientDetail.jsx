@@ -748,161 +748,162 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                 ))}
                             </div>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={addItem}
+                            style={{
+                                marginTop: '12px',
+                                background: 'transparent',
+                                color: 'var(--accent-color)',
+                                border: '1px dashed var(--accent-color)',
+                                width: '100%',
+                                padding: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            <Plus size={16} /> Añadir fila de producto
+                        </button>
+
+                        {!showWorkTable && (
                             <button
                                 type="button"
-                                onClick={addItem}
+                                onClick={() => { setShowWorkTable(true); if (workItems.length === 1 && workItems[0].hours === '') { } else if (workItems.length === 0) addWorkItem(); }}
                                 style={{
-                                    marginTop: '12px',
-                                    background: 'transparent',
-                                    color: 'var(--accent-color)',
-                                    border: '1px dashed var(--accent-color)',
+                                    marginTop: '20px',
+                                    background: 'var(--panel-bg)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
                                     width: '100%',
-                                    padding: '8px',
+                                    padding: '10px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '8px'
+                                    gap: '8px',
+                                    fontWeight: '600'
                                 }}
                             >
-                                <Plus size={16} /> Añadir fila de producto
+                                <Plus size={18} /> Incluir obra
                             </button>
+                        )}
 
-                            {!showWorkTable && (
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowWorkTable(true); if (workItems.length === 1 && workItems[0].hours === '') { } else if (workItems.length === 0) addWorkItem(); }}
-                                    style={{
-                                        marginTop: '20px',
-                                        background: 'var(--panel-bg)',
-                                        color: 'var(--text-primary)',
-                                        border: '1px solid var(--border-color)',
-                                        width: '100%',
-                                        padding: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '8px',
-                                        fontWeight: '600'
-                                    }}
-                                >
-                                    <Plus size={18} /> Incluir obra
-                                </button>
-                            )}
-
-                            {showWorkTable && (
-                                <div style={{ marginTop: '20px' }}>
-                                    <h3 style={{ fontSize: '15px', color: 'var(--accent-color)', marginBottom: '10px' }}>Obra</h3>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                                        <thead>
-                                            <tr style={{ background: '#d71920', color: 'white' }}>
-                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Horas</th>
-                                                <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Material</th>
-                                                <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
-                                                <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {workItems.map((item, idx) => {
-                                                const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
-                                                const matPrice = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
-                                                const total = hoursPrice + matPrice;
-                                                return (
-                                                    <tr key={idx}>
-                                                        <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                            <div style={{ display: 'flex' }}>
-                                                                <input
-                                                                    value={item.hoursStr !== undefined ? item.hoursStr : (item.hours === '' ? '' : item.hours)}
-                                                                    onChange={(e) => handleWorkItemChange(idx, 'hours', e.target.value)}
-                                                                    style={{ width: '50%', border: 'none', background: 'transparent', padding: '8px', borderRight: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-primary)' }}
-                                                                    placeholder="H"
-                                                                />
-                                                                <div style={{ width: '50%', padding: '8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '12px', alignSelf: 'center' }}>
-                                                                    {hoursPrice.toFixed(2)}€
+                        {showWorkTable && (
+                            <div style={{ marginTop: '20px' }}>
+                                <h3 style={{ fontSize: '15px', color: 'var(--accent-color)', marginBottom: '10px' }}>Obra</h3>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                    <thead>
+                                        <tr style={{ background: '#d71920', color: 'white' }}>
+                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Horas</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Material</th>
+                                            <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
+                                            <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {workItems.map((item, idx) => {
+                                            const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                                            const matPrice = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                                            const total = hoursPrice + matPrice;
+                                            return (
+                                                <tr key={idx}>
+                                                    <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                        <div style={{ display: 'flex' }}>
+                                                            <input
+                                                                value={item.hoursStr !== undefined ? item.hoursStr : (item.hours === '' ? '' : item.hours)}
+                                                                onChange={(e) => handleWorkItemChange(idx, 'hours', e.target.value)}
+                                                                style={{ width: '50%', border: 'none', background: 'transparent', padding: '8px', borderRight: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                                placeholder="H"
+                                                            />
+                                                            <div style={{ width: '50%', padding: '8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '12px', alignSelf: 'center' }}>
+                                                                {hoursPrice.toFixed(2)}€
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                            {item.materials.map((mat, mIdx) => (
+                                                                <div key={mIdx} style={{ display: 'flex', borderBottom: mIdx < item.materials.length - 1 ? '1px solid var(--border-color)' : 'none', alignItems: 'center' }}>
+                                                                    <input
+                                                                        value={mat.description}
+                                                                        onChange={(e) => handleMaterialChange(idx, mIdx, 'description', e.target.value)}
+                                                                        style={{ width: '60%', border: 'none', background: 'transparent', padding: '6px', borderRight: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px' }}
+                                                                        placeholder="Material..."
+                                                                    />
+                                                                    <input
+                                                                        value={mat.price}
+                                                                        onChange={(e) => handleMaterialChange(idx, mIdx, 'price', e.target.value)}
+                                                                        style={{ width: '30%', border: 'none', background: 'transparent', padding: '6px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '13px' }}
+                                                                        placeholder="€"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeWorkMaterial(idx, mIdx)}
+                                                                        style={{ width: '10%', background: 'transparent', color: 'var(--error-color)', padding: '4px', display: 'flex', justifyContent: 'center' }}
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
                                                                 </div>
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                {item.materials.map((mat, mIdx) => (
-                                                                    <div key={mIdx} style={{ display: 'flex', borderBottom: mIdx < item.materials.length - 1 ? '1px solid var(--border-color)' : 'none', alignItems: 'center' }}>
-                                                                        <input
-                                                                            value={mat.description}
-                                                                            onChange={(e) => handleMaterialChange(idx, mIdx, 'description', e.target.value)}
-                                                                            style={{ width: '60%', border: 'none', background: 'transparent', padding: '6px', borderRight: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px' }}
-                                                                            placeholder="Material..."
-                                                                        />
-                                                                        <input
-                                                                            value={mat.price}
-                                                                            onChange={(e) => handleMaterialChange(idx, mIdx, 'price', e.target.value)}
-                                                                            style={{ width: '30%', border: 'none', background: 'transparent', padding: '6px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '13px' }}
-                                                                            placeholder="€"
-                                                                        />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removeWorkMaterial(idx, mIdx)}
-                                                                            style={{ width: '10%', background: 'transparent', color: 'var(--error-color)', padding: '4px', display: 'flex', justifyContent: 'center' }}
-                                                                        >
-                                                                            <Trash2 size={12} />
-                                                                        </button>
-                                                                    </div>
-                                                                ))}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => addWorkMaterial(idx)}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        background: 'var(--panel-bg)',
-                                                                        padding: '2px',
-                                                                        fontSize: '11px',
-                                                                        color: 'var(--accent-color)',
-                                                                        border: 'none',
-                                                                        borderTop: '1px dashed var(--border-color)',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        gap: '4px'
-                                                                    }}
-                                                                >
-                                                                    <Plus size={10} /> Añadir material
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                                                            {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                                                        </td>
-                                                        <td style={{ padding: '4px', textAlign: 'center' }}>
+                                                            ))}
                                                             <button
                                                                 type="button"
-                                                                onClick={() => removeWorkItem(idx)}
-                                                                style={{ background: 'transparent', color: 'var(--error-color)', padding: '4px' }}
+                                                                onClick={() => addWorkMaterial(idx)}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    background: 'var(--panel-bg)',
+                                                                    padding: '2px',
+                                                                    fontSize: '11px',
+                                                                    color: 'var(--accent-color)',
+                                                                    border: 'none',
+                                                                    borderTop: '1px dashed var(--border-color)',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: '4px'
+                                                                }}
                                                             >
-                                                                <Trash2 size={16} />
+                                                                <Plus size={10} /> Añadir material
                                                             </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                    <button
-                                        type="button"
-                                        onClick={addWorkItem}
-                                        style={{
-                                            marginTop: '8px',
-                                            background: 'transparent',
-                                            color: 'var(--text-secondary)',
-                                            border: '1px dashed var(--border-color)',
-                                            width: '100%',
-                                            padding: '6px',
-                                            fontSize: '12px'
-                                        }}
-                                    >
-                                        <Plus size={14} /> Añadir fila de obra
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                                                        {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                                    </td>
+                                                    <td style={{ padding: '4px', textAlign: 'center' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeWorkItem(idx)}
+                                                            style={{ background: 'transparent', color: 'var(--error-color)', padding: '4px' }}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                <button
+                                    type="button"
+                                    onClick={addWorkItem}
+                                    style={{
+                                        marginTop: '8px',
+                                        background: 'transparent',
+                                        color: 'var(--text-secondary)',
+                                        border: '1px dashed var(--border-color)',
+                                        width: '100%',
+                                        padding: '6px',
+                                        fontSize: '12px'
+                                    }}
+                                >
+                                    <Plus size={14} /> Añadir fila de obra
+                                </button>
+                            </div>
+                        )}
                     </div>
+
 
                     <div style={{ marginTop: '30px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
                         <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
