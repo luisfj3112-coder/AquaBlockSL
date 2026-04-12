@@ -49,11 +49,12 @@ const Dashboard = () => {
         }
     };
 
-    const filteredClients = clients.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.offer_num && c.offer_num.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredClients = clients.filter(c => {
+        const nameMatch = c.name ? c.name.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+        const cityMatch = c.city ? c.city.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+        const offerMatch = c.offer_num ? c.offer_num.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+        return nameMatch || cityMatch || offerMatch;
+    });
 
     const clientsByStage = (stage) => filteredClients.filter(c => c.stage === stage);
 
@@ -187,7 +188,7 @@ const Dashboard = () => {
             <div style={{ padding: '0 40px 40px 40px' }}>
                 <BillingStats data={[
                     { label: 'Presupuesto no enviado', value: (clientsByStage('Presupuesto no enviado') || []).reduce((sum, c) => sum + (c.amount || 0), 0), color: '#8b949e' },
-                    { label: 'Presupuesto enviado', value: (clientsByStage('Presupuesto enviado') || []).reduce((sum, c) => sum + (c.amount || 0), 0), color: '#ff0000' },
+                    { label: 'Presupuesto enviado', value: (clientsByStage('Presupuesto enviado') || []).reduce((sum, c) => sum + (c.amount || 0), 0), color: '#58a6ff' },
                     { label: 'Vendido', value: (clientsByStage('Vendido') || []).reduce((sum, c) => sum + (c.amount || 0), 0), color: '#238636' }
                 ]} />
             </div>
