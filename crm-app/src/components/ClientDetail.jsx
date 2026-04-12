@@ -480,6 +480,26 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 productFields[`total_producto_${n}`] = parseFloat(item.price).toFixed(2);
             });
 
+            // Añadir la obra como producto adicional si existe
+            if (showWorkTable) {
+                const filteredWork = workItems.filter(it =>
+                    (it.hours && it.hours !== '') ||
+                    (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))
+                );
+                if (filteredWork.length > 0) {
+                    const totalObra = filteredWork.reduce((sum, item) => {
+                        const hoursPrice = (parseFloat(item.hours) || 0) * 25 * 1.21;
+                        const matSum = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
+                        return sum + hoursPrice + matSum;
+                    }, 0);
+                    const n = filteredItems.length + 1;
+                    productFields[`descripcion_producto_${n}`] = 'Obra de adaptación';
+                    productFields[`precio_unidad_${n}`] = totalObra.toFixed(2);
+                    productFields[`cantidad_${n}`] = 1;
+                    productFields[`total_producto_${n}`] = totalObra.toFixed(2);
+                }
+            }
+
             const payload = {
                 tipo: 'factura',
                 numero_factura: currentInvoiceNum,
