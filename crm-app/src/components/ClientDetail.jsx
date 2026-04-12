@@ -728,7 +728,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
                             {/* Sidebar de cantidad, fuera de la tabla, alineada por fila */}
                             <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '10px', flexShrink: 0 }}>
-                                {/* Espaciador para alinear con la cabecera de la tabla */}
                                 <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#d71920', borderRadius: '4px 4px 0 0', padding: '0 8px' }}>
                                     <span style={{ color: 'white', fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Cant.</span>
                                 </div>
