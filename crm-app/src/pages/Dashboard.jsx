@@ -50,10 +50,15 @@ const Dashboard = () => {
     };
 
     const filteredClients = clients.filter(c => {
-        const nameMatch = c.name ? c.name.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-        const cityMatch = c.city ? c.city.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-        const offerMatch = c.offer_num ? c.offer_num.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-        return nameMatch || cityMatch || offerMatch;
+        const s = searchTerm.toLowerCase();
+        const nameMatch = c.name ? c.name.toLowerCase().includes(s) : false;
+        const cityMatch = c.city ? c.city.toLowerCase().includes(s) : false;
+        const offerMatch = c.offer_num ? c.offer_num.toLowerCase().includes(s) : false;
+        const emailMatch = c.email ? c.email.toLowerCase().includes(s) : false;
+        const dniMatch = c.dni ? c.dni.toLowerCase().includes(s) : false;
+        const phoneMatch = c.phone ? c.phone.toLowerCase().includes(s) : false;
+        
+        return nameMatch || cityMatch || offerMatch || emailMatch || dniMatch || phoneMatch;
     });
 
     const clientsByStage = (stage) => filteredClients.filter(c => c.stage === stage);
