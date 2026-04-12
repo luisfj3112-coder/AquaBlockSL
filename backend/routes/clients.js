@@ -68,6 +68,7 @@ router.post('/', async (req, res) => {
                     medidas_ancho: item.medidas_ancho || null,
                     medidas_alto: item.medidas_alto || null,
                     mastiles: item.mastiles || null,
+                    quantity: item.quantity || 1,
                     price: item.price || 0
                 }));
                 const { error: itemsError } = await supabase.from('offer_items').insert(itemsToInsert);
@@ -125,6 +126,7 @@ router.put('/:id', async (req, res) => {
                     medidas_ancho: item.medidas_ancho || null,
                     medidas_alto: item.medidas_alto || null,
                     mastiles: item.mastiles || null,
+                    quantity: item.quantity || 1,
                     price: item.price || 0
                 }));
                 await supabase.from('offer_items').insert(itemsToInsert);

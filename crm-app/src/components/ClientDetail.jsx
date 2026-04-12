@@ -24,7 +24,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         stage: 'Sin presupuesto'
     });
 
-    const [items, setItems] = useState([{ description: '', medidas_ancho: '', medidas_alto: '', mastiles: '', price: '' }]);
+    const [items, setItems] = useState([{ description: '', medidas_ancho: '', medidas_alto: '', mastiles: '', price: '', quantity: 1 }]);
     const [workItems, setWorkItems] = useState([{ hours: '', materials: [{ description: '', price: '' }] }]);
     const [showWorkTable, setShowWorkTable] = useState(false);
     const [images, setImages] = useState([]);
@@ -49,7 +49,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     }, [client]);
 
     useEffect(() => {
-        const offerTotal = items.reduce((sum, item) => sum + (parseFloat(item.price) * 1.21 || 0), 0);
+        const offerTotal = items.reduce((sum, item) => sum + ((parseFloat(item.price) * 1.21 || 0) * (item.quantity || 1)), 0);
         let workTotal = 0;
         if (showWorkTable) {
             workTotal = workItems.reduce((sum, item) => {
@@ -261,7 +261,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     };
 
     const addItem = () => {
-        setItems([...items, { description: '', medidas_ancho: '', medidas_alto: '', mastiles: '', price: '' }]);
+        setItems([...items, { description: '', medidas_ancho: '', medidas_alto: '', mastiles: '', price: '', quantity: 1 }]);
     };
 
     const addWorkItem = () => {
@@ -286,7 +286,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const handleSubmit = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
         try {
-            const parsedItems = items.map(it => ({ ...it, price: parseFloat(it.price) || 0, medidas_ancho: it.medidas_ancho ? parseFloat(it.medidas_ancho) : null, medidas_alto: it.medidas_alto ? parseFloat(it.medidas_alto) : null, mastiles: it.mastiles ? parseFloat(it.mastiles) : null }));
+            const parsedItems = items.map(it => ({ ...it, price: parseFloat(it.price) || 0, quantity: parseInt(it.quantity) || 1, medidas_ancho: it.medidas_ancho ? parseFloat(it.medidas_ancho) : null, medidas_alto: it.medidas_alto ? parseFloat(it.medidas_alto) : null, mastiles: it.mastiles ? parseFloat(it.mastiles) : null }));
             const parsedWork = workItems.map(it => {
                 const matSum = it.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
                 return {
@@ -297,7 +297,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 };
             });
 
-            const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21), 0);
+            const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21 * (item.quantity || 1)), 0);
             let workTotal = 0;
             if (showWorkTable) {
                 workTotal = parsedWork.reduce((sum, item) => {
@@ -474,10 +474,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const productFields = {};
             filteredItems.forEach((item, index) => {
                 const n = index + 1;
+                const qty = parseInt(item.quantity) || 1;
+                const priceUnit = parseFloat(item.price);
+                const totalItem = (priceUnit * qty).toFixed(2);
                 productFields[`descripcion_producto_${n}`] = item.description;
-                productFields[`precio_unidad_${n}`] = parseFloat(item.price).toFixed(2);
-                productFields[`cantidad_${n}`] = 1;
-                productFields[`total_producto_${n}`] = parseFloat(item.price).toFixed(2);
+                productFields[`precio_unidad_${n}`] = priceUnit.toFixed(2);
+                productFields[`cantidad_${n}`] = qty;
+                productFields[`total_producto_${n}`] = totalItem;
             });
 
             // Añadir la obra como campo independiente si existe
@@ -641,11 +644,12 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
-                                    <tr style={{ background: '#d71920', color: 'white' }}>
+                                     <tr style={{ background: '#d71920', color: 'white' }}>
                                         <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9', minWidth: '320px' }}>Descripción</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Ancho</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Alto</th>
                                         <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Mástiles</th>
+                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '90px' }}>Cant.</th>
                                         <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>Precio</th>
                                         <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>21% IVA</th>
                                         <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
@@ -689,6 +693,21 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                                     placeholder="-"
                                                 />
                                             </td>
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '4px', textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleItemChange(idx, 'quantity', Math.max(1, (parseInt(item.quantity) || 1) - 1))}
+                                                        style={{ background: 'rgba(215,25,32,0.1)', color: '#d71920', border: '1px solid #d71920', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', lineHeight: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    >−</button>
+                                                    <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: 'bold' }}>{item.quantity || 1}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleItemChange(idx, 'quantity', (parseInt(item.quantity) || 1) + 1)}
+                                                        style={{ background: 'rgba(215,25,32,0.1)', color: '#d71920', border: '1px solid #d71920', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', lineHeight: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    >+</button>
+                                                </div>
+                                            </td>
                                             <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
                                                 <input
                                                     type="text"
@@ -702,16 +721,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                                 />
                                             </td>
                                             <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                                                {((parseFloat(item.price) || 0) * 0.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                                {((parseFloat(item.price) || 0) * (item.quantity || 1) * 0.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                                             </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={item.rowTotal !== undefined ? item.rowTotal : item.price === '' ? '' : ((parseFloat(item.price) || 0) * 1.21).toFixed(2).replace('.', ',')}
-                                                    onChange={(e) => handleItemChange(idx, 'rowTotal', e.target.value)}
-                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', fontWeight: '600', color: 'var(--text-primary)' }}
-                                                    placeholder="€"
-                                                />
+                                            <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                {((parseFloat(item.price) || 0) * (item.quantity || 1) * 1.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                                             </td>
                                             <td style={{ padding: '4px', textAlign: 'center' }}>
                                                 <button
