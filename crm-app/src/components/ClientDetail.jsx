@@ -847,8 +847,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                     </thead>
                                     <tbody>
                                         {workItems.map((item, idx) => {
-                                            const hVal = parseFloat(item.hours) || 0;
-                                            const hoursPrice = hVal * 30 * 1.21;
+                                            const hVal = item.hours !== undefined && item.hours !== '' ? parseFloat(item.hours) : (item.hoursStr ? parseFloat(item.hoursStr.replace(',', '.')) : 0);
+                                            const hoursPrice = (hVal || 0) * 30 * 1.21;
                                             const matPrice = item.materials ? item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0) : 0;
                                             const total = hoursPrice + matPrice;
                                             return (
@@ -856,13 +856,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                                     <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                                             <input
-                                                                value={item.hoursStr !== undefined ? item.hoursStr : (item.hours === '' ? '' : item.hours)}
+                                                                value={item.hoursStr !== undefined ? item.hoursStr : (item.hours === '' || item.hours === null ? '' : item.hours)}
                                                                 onChange={(e) => handleWorkItemChange(idx, 'hours', e.target.value)}
                                                                 style={{ width: '50%', border: 'none', background: 'transparent', padding: '12px 8px', borderRight: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-primary)', fontWeight: 'bold' }}
                                                                 placeholder="H"
                                                             />
-                                                            <div style={{ width: '50%', padding: '8px', textAlign: 'center', color: 'var(--success-color)', fontSize: '14px', fontWeight: '600' }}>
-                                                                {hoursPrice.toFixed(2)}€
+                                                            <div style={{ width: '50%', padding: '8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500' }}>
+                                                                {hoursPrice.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                                                             </div>
                                                         </div>
                                                     </td>
