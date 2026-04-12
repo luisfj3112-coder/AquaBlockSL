@@ -42,13 +42,13 @@ router.get('/', async (req, res) => {
 // Add new client
 router.post('/', async (req, res) => {
     log(`POST /clients - Body: ${JSON.stringify(req.body)}`);
-    const { name, address, city, zip, phone, email, offer_num, offer_date, invoice_num, invoice_date, amount, ordered, man_num, order_date, stage, items, workItems } = req.body;
+    const { name, address, city, zip, phone, email, dni, offer_num, offer_date, invoice_num, invoice_date, amount, ordered, man_num, order_date, stage, items, workItems } = req.body;
 
     try {
         const { data: client, error: clientError } = await supabase
             .from('clients')
             .insert([{
-                name, address, city, zip, phone, email, offer_num, offer_date, invoice_num, invoice_date,
+                name, address, city, zip, phone, email, dni, offer_num, offer_date, invoice_num, invoice_date,
                 amount, ordered: ordered ? 1 : 0, man_num, order_date, stage: stage || 'Sin presupuesto'
             }])
             .select()
@@ -101,13 +101,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     log(`PUT /clients/${id} - Body: ${JSON.stringify(req.body)}`);
-    const { name, address, city, zip, phone, email, offer_num, offer_date, invoice_num, invoice_date, amount, ordered, man_num, order_date, stage, items, workItems } = req.body;
+    const { name, address, city, zip, phone, email, dni, offer_num, offer_date, invoice_num, invoice_date, amount, ordered, man_num, order_date, stage, items, workItems } = req.body;
 
     try {
         const { error: updateError } = await supabase
             .from('clients')
             .update({
-                name, address, city, zip, phone, email, offer_num, offer_date, invoice_num, invoice_date,
+                name, address, city, zip, phone, email, dni, offer_num, offer_date, invoice_num, invoice_date,
                 amount, ordered: ordered ? 1 : 0, man_num, order_date, stage
             })
             .eq('id', id);
