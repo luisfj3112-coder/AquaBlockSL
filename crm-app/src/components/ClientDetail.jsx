@@ -1030,7 +1030,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                     <button
                         type="button"
                         onClick={handleGenerateInvoice}
-                        style={{ background: '#24292f', color: 'white', border: '1px solid var(--border-color)', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px', borderRadius: '4px' }}
+                        style={{ background: 'var(--success-color)', color: 'white', border: 'none', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px', borderRadius: '4px' }}
                     >
                         <FileText size={18} /> Generar Factura
                     </button>
