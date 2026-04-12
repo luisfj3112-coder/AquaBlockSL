@@ -618,7 +618,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                 type="text"
                                 value={(formData.amount || 0).toFixed(2).replace('.', ',')}
                                 readOnly={true}
-                                style={{ background: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--accent-color)', cursor: 'not-allowed' }}
+                                style={{ background: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--text-primary)', cursor: 'not-allowed' }}
                                 placeholder="0,00"
                             />
                         </div>
@@ -839,7 +839,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                     <thead>
                                         <tr style={{ background: '#d71920', color: 'white' }}>
-                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Horas</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '80px' }}>Horas</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '100px' }}>Precio H.</th>
                                             <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9' }}>Material</th>
                                             <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
                                             <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
@@ -847,24 +848,22 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                     </thead>
                                     <tbody>
                                         {workItems.map((item, idx) => {
-                                            const hVal = item.hours !== undefined && item.hours !== '' ? parseFloat(item.hours) : (item.hoursStr ? parseFloat(item.hoursStr.replace(',', '.')) : 0);
-                                            const hoursPrice = (hVal || 0) * 30 * 1.21;
-                                            const matPrice = item.materials ? item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0) : 0;
+                                            const hVal = parseFloat(item.hoursStr?.toString().replace(',', '.') || item.hours) || 0;
+                                            const hoursPrice = hVal * 30 * 1.21;
+                                            const matPrice = item.materials ? item.materials.reduce((sum, m) => sum + (parseFloat(m.price?.toString().replace(',', '.')) || 0), 0) : 0;
                                             const total = hoursPrice + matPrice;
                                             return (
                                                 <tr key={idx}>
                                                     <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                            <input
-                                                                value={item.hoursStr !== undefined ? item.hoursStr : (item.hours === '' || item.hours === null ? '' : item.hours)}
-                                                                onChange={(e) => handleWorkItemChange(idx, 'hours', e.target.value)}
-                                                                style={{ width: '50%', border: 'none', background: 'transparent', padding: '12px 8px', borderRight: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-primary)', fontWeight: 'bold' }}
-                                                                placeholder="H"
-                                                            />
-                                                            <div style={{ width: '50%', padding: '8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500' }}>
-                                                                {hoursPrice.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
-                                                            </div>
-                                                        </div>
+                                                        <input
+                                                            value={item.hoursStr !== undefined ? item.hoursStr : (item.hours === '' || item.hours === null ? '' : item.hours)}
+                                                            onChange={(e) => handleWorkItemChange(idx, 'hours', e.target.value)}
+                                                            style={{ width: '100%', border: 'none', background: 'transparent', padding: '12px 8px', textAlign: 'center', color: 'var(--text-primary)', fontWeight: 'bold' }}
+                                                            placeholder="H"
+                                                        />
+                                                    </td>
+                                                    <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                        {hVal > 0 ? `${hoursPrice.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€` : '-'}
                                                     </td>
                                                     <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
                                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
