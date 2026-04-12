@@ -480,7 +480,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 productFields[`total_producto_${n}`] = parseFloat(item.price).toFixed(2);
             });
 
-            // Añadir la obra como producto adicional si existe
+            // Añadir la obra como campo independiente si existe
             if (showWorkTable) {
                 const filteredWork = workItems.filter(it =>
                     (it.hours && it.hours !== '') ||
@@ -492,11 +492,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         const matSum = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
                         return sum + hoursPrice + matSum;
                     }, 0);
-                    const n = filteredItems.length + 1;
-                    productFields[`descripcion_producto_${n}`] = 'Obra de adaptación';
-                    productFields[`precio_unidad_${n}`] = totalObra.toFixed(2);
-                    productFields[`cantidad_${n}`] = 1;
-                    productFields[`total_producto_${n}`] = totalObra.toFixed(2);
+                    productFields['obra_descripcion'] = 'Obra de adaptación';
+                    productFields['obra_precio_unidad'] = totalObra.toFixed(2);
+                    productFields['obra_cantidad'] = 1;
+                    productFields['obra_total'] = totalObra.toFixed(2);
                 }
             }
 
