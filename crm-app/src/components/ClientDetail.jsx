@@ -464,9 +464,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             }
 
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
-            const subtotal = formData.amount;
-            const iva = subtotal * 0.21;
-            const total = subtotal + iva;
+            const totalConIva = formData.amount;
+            const subtotal = totalConIva / 1.21;
+            const iva = totalConIva - subtotal;
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
 
@@ -510,7 +510,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 ...productFields,
                 subtotal: subtotal.toFixed(2),
                 total_iva: iva.toFixed(2),
-                total_factura: total.toFixed(2)
+                total_factura: totalConIva.toFixed(2)
             };
 
             console.log('Enviando datos planos de factura al Webhook:', payload);
