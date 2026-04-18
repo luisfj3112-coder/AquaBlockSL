@@ -192,45 +192,36 @@ router.delete('/:id', async (req, res) => {
 router.get('/next-invoice-number', async (req, res) => {
     try {
         const { date } = req.query;
-        let targetDate;
-        
-        if (date) {
-            targetDate = new Date(date);
-        } else {
-            targetDate = new Date();
-        }
-
+        let targetDate = date ? new Date(date) : new Date();
         const yyyy = targetDate.getFullYear();
-        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(targetDate.getDate()).padStart(2, '0');
-        const datePrefix = `${yyyy}${mm}${dd}`;
 
-        log(`Generating invoice number for prefix: ${datePrefix}`);
+        log(`Generating invoice number for year: ${yyyy}`);
 
-        // Get all clients that have an invoice number starting with this date prefix
+        // Get all clients that have an invoice number starting with this year prefix
         const { data, error } = await supabase
             .from('clients')
             .select('invoice_num')
-            .like('invoice_num', `${datePrefix}.%`);
+            .filter('invoice_num', 'not.is', null)
+            .like('invoice_num', `${yyyy}%`);
 
         if (error) throw error;
 
-        let lastNum = 0;
+        let maxSeq = 0;
         if (data && data.length > 0) {
-            // Extract the suffix and find the max
-            const suffixes = data.map(c => {
-                if (!c.invoice_num) return 0;
-                const parts = c.invoice_num.split('.');
-                return parts.length > 1 ? parseInt(parts[1], 10) : 0;
-            }).filter(n => !isNaN(n));
-            
-            if (suffixes.length > 0) {
-                lastNum = Math.max(...suffixes);
-            }
+            data.forEach(c => {
+                const numStr = String(c.invoice_num);
+                // Pattern YYYYNNNN (8 digits)
+                if (numStr.length === 8 && numStr.startsWith(String(yyyy))) {
+                    const seq = parseInt(numStr.substring(4), 10);
+                    if (!isNaN(seq) && seq > maxSeq) {
+                        maxSeq = seq;
+                    }
+                }
+            });
         }
 
-        const nextNum = String(lastNum + 1).padStart(2, '0');
-        const nextInvoiceNum = `${datePrefix}.${nextNum}`;
+        const nextSeq = String(maxSeq + 1).padStart(4, '0');
+        const nextInvoiceNum = `${yyyy}${nextSeq}`;
 
         res.send({ nextInvoiceNum });
     } catch (err) {

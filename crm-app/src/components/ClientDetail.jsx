@@ -32,6 +32,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const [pendingPreviews, setPendingPreviews] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [autoGenerateNum, setAutoGenerateNum] = useState(false);
 
     useEffect(() => {
         if (client) {
@@ -452,15 +453,68 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             let currentInvoiceNum = formData.invoice_num;
             let currentInvoiceDate = formData.invoice_date;
 
-            if (!currentInvoiceNum || currentInvoiceNum.trim() === '') {
+            // If auto-generate is checked, always get a new number from the backend
+            if (autoGenerateNum) {
                 const generated = await handleGenerateInvoiceNum();
                 if (generated) {
                     currentInvoiceNum = generated.nextInvoiceNum;
                     currentInvoiceDate = generated.todayStr;
-                    // Note: formData state will update asynchronously, but we use local vars for immediate request
+                    
+                    // We MUST save common fields and the new invoice number immediately
+                    // to avoid duplicates and ensure it's registered in the DB
+                    const parsedItems = items.map(it => ({ 
+                        ...it, 
+                        price: parseFloat(it.price) || 0, 
+                        quantity: parseInt(it.quantity) || 1, 
+                        medidas_ancho: it.medidas_ancho ? parseFloat(it.medidas_ancho) : null, 
+                        medidas_alto: it.medidas_alto ? parseFloat(it.medidas_alto) : null, 
+                        mastiles: it.mastiles ? parseFloat(it.mastiles) : null 
+                    }));
+                    const parsedWork = workItems.map(it => {
+                        const matSum = it.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                        return {
+                            ...it,
+                            hours: parseFloat(it.hours) || 0,
+                            material_description: 'JSON:' + JSON.stringify(it.materials),
+                            material_price: matSum
+                        };
+                    });
+
+                    const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21 * (item.quantity || 1)), 0);
+                    let workTotal = 0;
+                    if (showWorkTable) {
+                        workTotal = parsedWork.reduce((sum, item) => {
+                            const hoursPrice = (item.hours || 0) * 30 * 1.21;
+                            const matPrice = item.material_price || 0;
+                            return sum + hoursPrice + matPrice;
+                        }, 0);
+                    }
+                    const finalAmount = offerTotal + workTotal;
+
+                    const savePayload = {
+                        ...formData,
+                        invoice_num: currentInvoiceNum,
+                        invoice_date: currentInvoiceDate,
+                        amount: finalAmount,
+                        items: parsedItems,
+                        workItems: parsedWork
+                    };
+
+                    if (client && client.id) {
+                        await api.put(`/clients/${client.id}`, savePayload);
+                    } else {
+                        const res = await api.post('/clients', savePayload);
+                        // If it's a new client, we should ideally have the ID now
+                        // but handleGenerateInvoice is usually called on existing clients.
+                    }
+                    
+                    if (onRefresh) onRefresh();
                 } else {
-                    return; // Error or cancelled
+                    return; // Error generating number
                 }
+            } else if (!currentInvoiceNum || currentInvoiceNum.trim() === '') {
+                // User said: "если не выбрано, номера не будет"
+                currentInvoiceNum = '';
             }
 
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
@@ -585,25 +639,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                             <input name="offer_date" type="date" value={formData.offer_date} onChange={handleChange} />
                         </div>
                         <div className="form-group">
-                            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label>
                                 Número de Factura
-                                <button 
-                                    type="button" 
-                                    onClick={handleGenerateInvoiceNum}
-                                    className="btn-tiny"
-                                    style={{ 
-                                        fontSize: '10px', 
-                                        padding: '2px 8px', 
-                                        background: 'rgba(215, 25, 32, 0.1)', 
-                                        color: '#d71920', 
-                                        border: '1px solid #d71920', 
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontWeight: 'bold'
-                                    }}
-                                >
-                                    Auto-generar
-                                </button>
                             </label>
                             <input name="invoice_num" value={formData.invoice_num} onChange={handleChange} />
                         </div>
@@ -1027,13 +1064,32 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                     >
                         <FileText size={18} /> Generar Oferta
                     </button>
-                    <button
-                        type="button"
-                        onClick={handleGenerateInvoice}
-                        style={{ background: 'var(--success-color)', color: 'white', border: 'none', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px', borderRadius: '4px' }}
-                    >
-                        <FileText size={18} /> Generar Factura
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
+                        <div 
+                            onClick={() => setAutoGenerateNum(!autoGenerateNum)}
+                            style={{ 
+                                width: '20px', 
+                                height: '20px', 
+                                border: '2px solid var(--success-color)', 
+                                borderRadius: '4px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                cursor: 'pointer',
+                                background: autoGenerateNum ? 'var(--success-color)' : 'transparent',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            {autoGenerateNum && <X size={14} color="white" />}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleGenerateInvoice}
+                            style={{ background: 'var(--success-color)', color: 'white', border: 'none', padding: '8px 16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px' }}
+                        >
+                            <FileText size={18} /> Generar Factura
+                        </button>
+                    </div>
                     <button
                         type="button"
                         onClick={onClose}
