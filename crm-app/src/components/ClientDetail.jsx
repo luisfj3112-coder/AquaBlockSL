@@ -68,13 +68,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const { data } = await api.get(`/clients/next-invoice-number${dateParam}`);
             const nextInvoiceNum = data.nextInvoiceNum;
             const updatedDate = selectedDate || new Date().toISOString().split('T')[0];
-            
+
             setFormData(prev => ({
                 ...prev,
                 invoice_num: nextInvoiceNum,
                 invoice_date: updatedDate
             }));
-            
+
             return { nextInvoiceNum, todayStr: updatedDate };
         } catch (err) {
             console.error('Error fetching next invoice number', err);
@@ -157,23 +157,23 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         const newItems = items.map((item, i) => {
             if (i === index) {
                 let updatedItem = { ...item };
-                
+
                 if (field === 'rowTotal') {
                     const newPrice = numValue === '' ? '' : numValue / 1.21;
                     return { ...updatedItem, price: newPrice, rowTotal: value };
                 }
-                
+
                 if (field === 'price') {
                     updatedItem.price = numValue;
                     updatedItem.priceStr = value;
                 } else if (field === 'medidas_ancho' || field === 'medidas_alto' || field === 'mastiles') {
                     const valClean = value.replace(',', '.');
                     updatedItem[field] = valClean;
-                    
+
                     const a = parseFloat(field === 'medidas_ancho' ? valClean : updatedItem.medidas_ancho) || 0;
                     const h = parseFloat(field === 'medidas_alto' ? valClean : updatedItem.medidas_alto) || 0;
                     const m = parseFloat(field === 'mastiles' ? valClean : updatedItem.mastiles) || 0;
-                    
+
                     if (a > 0) {
                         let basePrice = 0;
                         if (a <= 1.2) basePrice = 371.26;
@@ -187,13 +187,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         const hValid = h >= 0.5 ? h : 0;
                         const moduleLayers = hValid > 0 ? hValid / 0.5 : 0;
                         const totalModulesCost = moduleLayers * basePrice;
-                        
+
                         let totalMastilCost = 0;
                         if (m > 0 && hValid > 0) {
                             if (hValid === 0.5) totalMastilCost = m * 54.00;
                             else totalMastilCost = m * (hValid * 96.36);
                         }
-                        
+
                         const calculatedPrice = totalModulesCost + totalMastilCost;
                         if (calculatedPrice > 0) {
                             updatedItem.price = calculatedPrice;
@@ -203,7 +203,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 } else {
                     updatedItem[field] = value;
                 }
-                
+
                 return updatedItem;
             }
             return item;
@@ -409,8 +409,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
             const totalFilas = filteredItems.length + filteredWork.length;
 
-            const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
-            const params = {
+            const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/64a10a1f-ae2b-4934-a809-dc6dc588b8ee';
+            const payload = {
                 tipo: 'oferta',
                 nombre: formData.name,
                 telefono: formData.phone,
@@ -422,12 +422,12 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 fecha_oferta: formData.offer_date,
                 importe_total: formData.amount,
                 total_filas: totalFilas,
-                items: JSON.stringify(filteredItems.map(item => ({
+                items: filteredItems.map(item => ({
                     descripcion: item.description,
                     precio: parseFloat(item.price) || 0,
                     total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
-                }))),
-                work_items: JSON.stringify(filteredWork.map(item => {
+                })),
+                work_items: filteredWork.map(item => {
                     const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
                     const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
                     return {
@@ -437,10 +437,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         precio_material: matSum.toFixed(2),
                         total: (hoursPrice + matSum).toFixed(2)
                     };
-                }))
+                })
             };
 
-            await axios.get(webhookUrl, { params });
+            await axios.post(webhookUrl, payload);
             alert('Oferta enviada correctamente');
         } catch (err) {
             console.error('Error sending offer to webhook', err);
@@ -459,16 +459,16 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 if (generated) {
                     currentInvoiceNum = generated.nextInvoiceNum;
                     currentInvoiceDate = generated.todayStr;
-                    
+
                     // We MUST save common fields and the new invoice number immediately
                     // to avoid duplicates and ensure it's registered in the DB
-                    const parsedItems = items.map(it => ({ 
-                        ...it, 
-                        price: parseFloat(it.price) || 0, 
-                        quantity: parseInt(it.quantity) || 1, 
-                        medidas_ancho: it.medidas_ancho ? parseFloat(it.medidas_ancho) : null, 
-                        medidas_alto: it.medidas_alto ? parseFloat(it.medidas_alto) : null, 
-                        mastiles: it.mastiles ? parseFloat(it.mastiles) : null 
+                    const parsedItems = items.map(it => ({
+                        ...it,
+                        price: parseFloat(it.price) || 0,
+                        quantity: parseInt(it.quantity) || 1,
+                        medidas_ancho: it.medidas_ancho ? parseFloat(it.medidas_ancho) : null,
+                        medidas_alto: it.medidas_alto ? parseFloat(it.medidas_alto) : null,
+                        mastiles: it.mastiles ? parseFloat(it.mastiles) : null
                     }));
                     const parsedWork = workItems.map(it => {
                         const matSum = it.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
@@ -507,7 +507,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         // If it's a new client, we should ideally have the ID now
                         // but handleGenerateInvoice is usually called on existing clients.
                     }
-                    
+
                     if (onRefresh) onRefresh();
                 } else {
                     return; // Error generating number
@@ -680,87 +680,87 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         <h3 style={{ fontSize: '16px', marginBottom: '16px' }}>Condiciones Particulares de la oferta</h3>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0' }}>
                             <div style={{ overflowX: 'auto', flex: 1 }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                                <thead>
-                                     <tr style={{ background: '#d71920', color: 'white' }}>
-                                        <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9', minWidth: '320px' }}>Descripción</th>
-                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Ancho</th>
-                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Alto</th>
-                                        <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Mástiles</th>
-                                        <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>Precio</th>
-                                        <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>21% IVA</th>
-                                        <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
-                                        <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {items.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                <input
-                                                    value={item.description}
-                                                    onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', color: 'var(--text-primary)' }}
-                                                    placeholder="Descripción del producto..."
-                                                />
-                                            </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
-                                                <input
-                                                    value={item.medidas_ancho !== undefined && item.medidas_ancho !== null ? item.medidas_ancho : ''}
-                                                    onChange={(e) => handleItemChange(idx, 'medidas_ancho', e.target.value)}
-                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
-                                                    placeholder="-"
-                                                />
-                                            </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    step="0.5"
-                                                    value={item.medidas_alto !== undefined && item.medidas_alto !== null ? item.medidas_alto : ''}
-                                                    onChange={(e) => handleItemChange(idx, 'medidas_alto', e.target.value)}
-                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
-                                                    placeholder="-"
-                                                />
-                                            </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
-                                                <input
-                                                    value={item.mastiles !== undefined && item.mastiles !== null ? item.mastiles : ''}
-                                                    onChange={(e) => handleItemChange(idx, 'mastiles', e.target.value)}
-                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
-                                                    placeholder="-"
-                                                />
-                                            </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={item.priceStr !== undefined ? item.priceStr : (item.price === '' ? '' : (item.price || 0).toString().replace('.', ','))}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/[^0-9.,]/g, '');
-                                                        handleItemChange(idx, 'price', val);
-                                                    }}
-                                                    style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', color: 'var(--text-primary)' }}
-                                                    placeholder="€"
-                                                />
-                                            </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                                                {((parseFloat(item.price) || 0) * (item.quantity || 1) * 0.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                                            </td>
-                                            <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                                {((parseFloat(item.price) || 0) * (item.quantity || 1) * 1.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                                            </td>
-                                            <td style={{ padding: '4px', textAlign: 'center' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeItem(idx)}
-                                                    style={{ background: 'transparent', color: 'var(--error-color)', padding: '4px' }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                    <thead>
+                                        <tr style={{ background: '#d71920', color: 'white' }}>
+                                            <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #c9d1d9', minWidth: '320px' }}>Descripción</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Ancho</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Alto</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #c9d1d9', width: '70px' }}>Mástiles</th>
+                                            <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>Precio</th>
+                                            <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '120px' }}>21% IVA</th>
+                                            <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #c9d1d9', width: '150px' }}>Total</th>
+                                            <th style={{ width: '40px', border: 'none', background: 'transparent' }}></th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {items.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                    <input
+                                                        value={item.description}
+                                                        onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                                                        style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', color: 'var(--text-primary)' }}
+                                                        placeholder="Descripción del producto..."
+                                                    />
+                                                </td>
+                                                <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
+                                                    <input
+                                                        value={item.medidas_ancho !== undefined && item.medidas_ancho !== null ? item.medidas_ancho : ''}
+                                                        onChange={(e) => handleItemChange(idx, 'medidas_ancho', e.target.value)}
+                                                        style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                        placeholder="-"
+                                                    />
+                                                </td>
+                                                <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
+                                                    <input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={item.medidas_alto !== undefined && item.medidas_alto !== null ? item.medidas_alto : ''}
+                                                        onChange={(e) => handleItemChange(idx, 'medidas_alto', e.target.value)}
+                                                        style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                        placeholder="-"
+                                                    />
+                                                </td>
+                                                <td style={{ border: '1px solid var(--border-color)', padding: '0', textAlign: 'center' }}>
+                                                    <input
+                                                        value={item.mastiles !== undefined && item.mastiles !== null ? item.mastiles : ''}
+                                                        onChange={(e) => handleItemChange(idx, 'mastiles', e.target.value)}
+                                                        style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'center', color: 'var(--text-primary)' }}
+                                                        placeholder="-"
+                                                    />
+                                                </td>
+                                                <td style={{ border: '1px solid var(--border-color)', padding: '0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={item.priceStr !== undefined ? item.priceStr : (item.price === '' ? '' : (item.price || 0).toString().replace('.', ','))}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                                            handleItemChange(idx, 'price', val);
+                                                        }}
+                                                        style={{ width: '100%', border: 'none', background: 'transparent', padding: '8px', textAlign: 'right', color: 'var(--text-primary)' }}
+                                                        placeholder="€"
+                                                    />
+                                                </td>
+                                                <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                                    {((parseFloat(item.price) || 0) * (item.quantity || 1) * 0.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                                </td>
+                                                <td style={{ border: '1px solid var(--border-color)', padding: '8px', textAlign: 'right', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                    {((parseFloat(item.price) || 0) * (item.quantity || 1) * 1.21).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                                </td>
+                                                <td style={{ padding: '4px', textAlign: 'center' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeItem(idx)}
+                                                        style={{ background: 'transparent', color: 'var(--error-color)', padding: '4px' }}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
 
                             {/* Sidebar de cantidad, vertical y muy estrecho en rojo */}
@@ -768,12 +768,12 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                 <div style={{ height: '37px' }}></div> {/* Espacio cabecera */}
                                 {items.map((item, idx) => (
                                     <div key={idx} style={{ height: '41px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <div style={{ 
-                                            display: 'flex', 
+                                        <div style={{
+                                            display: 'flex',
                                             flexDirection: 'column',
-                                            alignItems: 'center', 
-                                            border: '1px solid #ddd', 
-                                            borderRadius: '3px', 
+                                            alignItems: 'center',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '3px',
                                             overflow: 'hidden',
                                             width: '20px',
                                             background: 'white'
@@ -781,13 +781,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                             <button
                                                 type="button"
                                                 onClick={() => handleItemChange(idx, 'quantity', (parseInt(item.quantity) || 1) + 1)}
-                                                style={{ 
-                                                    background: '#d71920', 
-                                                    color: 'white', 
-                                                    border: 'none', 
-                                                    width: '100%', 
-                                                    height: '14px', 
-                                                    cursor: 'pointer', 
+                                                style={{
+                                                    background: '#d71920',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    width: '100%',
+                                                    height: '14px',
+                                                    cursor: 'pointer',
                                                     fontSize: '10px',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -795,12 +795,12 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                                     padding: 0
                                                 }}
                                             >+</button>
-                                            <div style={{ 
+                                            <div style={{
                                                 height: '14px',
                                                 lineHeight: '14px',
-                                                textAlign: 'center', 
-                                                fontSize: '10px', 
-                                                fontWeight: 'bold', 
+                                                textAlign: 'center',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
                                                 color: '#333'
                                             }}>
                                                 {item.quantity || 1}
@@ -808,13 +808,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                             <button
                                                 type="button"
                                                 onClick={() => handleItemChange(idx, 'quantity', Math.max(1, (parseInt(item.quantity) || 1) - 1))}
-                                                style={{ 
-                                                    background: '#d71920', 
-                                                    color: 'white', 
-                                                    border: 'none', 
-                                                    width: '100%', 
-                                                    height: '14px', 
-                                                    cursor: 'pointer', 
+                                                style={{
+                                                    background: '#d71920',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    width: '100%',
+                                                    height: '14px',
+                                                    cursor: 'pointer',
                                                     fontSize: '12px',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -1065,16 +1065,16 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         <FileText size={18} /> Generar Oferta
                     </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
-                        <div 
+                        <div
                             onClick={() => setAutoGenerateNum(!autoGenerateNum)}
-                            style={{ 
-                                width: '20px', 
-                                height: '20px', 
-                                border: '2px solid var(--success-color)', 
-                                borderRadius: '4px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
+                            style={{
+                                width: '20px',
+                                height: '20px',
+                                border: '2px solid var(--success-color)',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
                                 cursor: 'pointer',
                                 background: autoGenerateNum ? 'var(--success-color)' : 'transparent',
                                 transition: 'all 0.2s'
