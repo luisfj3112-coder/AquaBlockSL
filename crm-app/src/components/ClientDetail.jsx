@@ -407,9 +407,13 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         try {
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
             const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
+            
+            // Total filas sumando productos y obra
             const totalFilas = filteredItems.length + filteredWork.length;
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/64a10a1f-ae2b-4934-a809-dc6dc588b8ee';
+            
+            // Base del payload
             const payload = {
                 tipo: 'oferta',
                 nombre: formData.name,
@@ -420,25 +424,53 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 cp: formData.zip,
                 num_oferta: formData.offer_num,
                 fecha_oferta: formData.offer_date,
-                importe_total: formData.amount,
-                total_filas: totalFilas,
-                items: filteredItems.map(item => ({
-                    descripcion: item.description,
-                    precio: parseFloat(item.price) || 0,
-                    total: ((parseFloat(item.price) || 0) * 1.21).toFixed(2)
-                })),
-                work_items: filteredWork.map(item => {
-                    const matSum = item.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
-                    const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
-                    return {
-                        horas: item.hours,
-                        precio_hours: hoursPrice.toFixed(2),
-                        materiales: item.materials.filter(m => m.description.trim() !== ''),
-                        precio_material: matSum.toFixed(2),
-                        total: (hoursPrice + matSum).toFixed(2)
-                    };
-                })
+                importe_total: Number(parseFloat(formData.amount).toFixed(2)),
+                total_filas: totalFilas
             };
+
+            // Añadir productos de forma aplanada (producto_1, producto_2...)
+            filteredItems.forEach((item, index) => {
+                const n = index + 1;
+                const qty = parseInt(item.quantity) || 1;
+                const priceUnit = parseFloat(item.price) || 0;
+                const ivaUnit = Number((priceUnit * 0.21).toFixed(2));
+                const priceWithIvaUnit = Number((priceUnit * 1.21).toFixed(2));
+                const totalLine = Number((priceWithIvaUnit * qty).toFixed(2));
+
+                payload[`descripcion_producto_${n}`] = item.description;
+                payload[`cantidad_producto_${n}`] = qty;
+                payload[`precio_unidad_sin_iva_${n}`] = Number(priceUnit.toFixed(2));
+                payload[`iva_unidad_${n}`] = ivaUnit;
+                payload[`total_unidad_con_iva_${n}`] = priceWithIvaUnit;
+                payload[`total_linea_con_iva_${n}`] = totalLine;
+                
+                // Medidas opcionales
+                if (item.medidas_ancho) payload[`ancho_${n}`] = item.medidas_ancho;
+                if (item.medidas_alto) payload[`alto_${n}`] = item.medidas_alto;
+                if (item.mastiles) payload[`mastiles_${n}`] = item.mastiles;
+            });
+
+            // Añadir obra de forma aplanada
+            filteredWork.forEach((work, index) => {
+                const n = index + 1;
+                const hours = parseFloat(work.hours) || 0;
+                const hoursPriceSinIva = hours * 30; // Precio hora estándar
+                const hoursIva = Number((hoursPriceSinIva * 0.21).toFixed(2));
+                
+                const matSumSinIva = work.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                const matIva = Number((matSumSinIva * 0.21).toFixed(2));
+                const totalObraConIva = Number(((hoursPriceSinIva + matSumSinIva) * 1.21).toFixed(2));
+
+                payload[`obra_descripcion_${n}`] = work.description;
+                payload[`obra_horas_${n}`] = hours;
+                payload[`obra_precio_horas_sin_iva_${n}`] = Number(hoursPriceSinIva.toFixed(2));
+                payload[`obra_iva_horas_${n}`] = hoursIva;
+                
+                payload[`obra_materiales_nombres_${n}`] = work.materials.filter(m => m.description.trim() !== '').map(m => m.description).join(', ');
+                payload[`obra_precio_material_sin_iva_${n}`] = Number(matSumSinIva.toFixed(2));
+                payload[`obra_iva_material_${n}`] = matIva;
+                payload[`obra_total_con_iva_${n}`] = totalObraConIva;
+            });
 
             await axios.post(webhookUrl, payload);
             alert('Oferta enviada correctamente');
