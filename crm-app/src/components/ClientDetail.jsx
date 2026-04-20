@@ -408,8 +408,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
             const filteredWork = showWorkTable ? workItems.filter(it => (it.hours && it.hours !== '') || (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))) : [];
             
-            // Total filas sumando productos y obra
-            const totalFilas = filteredItems.length + filteredWork.length;
+            // Total filas sumando productos y la obra como una sola unidad si existe
+            const totalFilas = filteredItems.length + (filteredWork.length > 0 ? 1 : 0);
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/64a10a1f-ae2b-4934-a809-dc6dc588b8ee';
             
@@ -450,27 +450,36 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 if (item.mastiles) payload[`mastiles_${n}`] = item.mastiles;
             });
 
-            // Añadir obra de forma aplanada
-            filteredWork.forEach((work, index) => {
-                const n = index + 1;
-                const hours = parseFloat(work.hours) || 0;
-                const hoursPriceSinIva = hours * 30; // Precio hora estándar
-                const hoursIva = Number((hoursPriceSinIva * 0.21).toFixed(2));
-                
-                const matSumSinIva = work.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
-                const matIva = Number((matSumSinIva * 0.21).toFixed(2));
-                const totalObraConIva = Number(((hoursPriceSinIva + matSumSinIva) * 1.21).toFixed(2));
+            // Añadir obra de forma agrupada siguiendo las nuevas reglas (Materiales sin IVA)
+            if (filteredWork.length > 0) {
+                let totalHours = 0;
+                let totalMatSum = 0;
+                let materialsDescriptions = [];
 
-                payload[`obra_descripcion_${n}`] = work.description;
-                payload[`obra_horas_${n}`] = hours;
-                payload[`obra_precio_horas_sin_iva_${n}`] = Number(hoursPriceSinIva.toFixed(2));
-                payload[`obra_iva_horas_${n}`] = hoursIva;
+                filteredWork.forEach(work => {
+                    totalHours += parseFloat(work.hours) || 0;
+                    const matSum = work.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                    totalMatSum += matSum;
+                    
+                    const desc = work.materials
+                        .filter(m => m.description && m.description.trim() !== '')
+                        .map(m => m.description);
+                    materialsDescriptions = [...materialsDescriptions, ...desc];
+                });
+
+                const hoursPriceSinIva = totalHours * 30;
+                const hoursIva = Number((hoursPriceSinIva * 0.21).toFixed(2));
+                const totalObra = Number((hoursPriceSinIva + hoursIva + totalMatSum).toFixed(2));
+
+                payload[`obra_descripcion`] = 'Obra de adaptación';
+                payload[`obra_precio_sin_iva`] = Number((hoursPriceSinIva + totalMatSum).toFixed(2));
+                payload[`obra_iva_horas`] = hoursIva;
+                payload[`obra_total`] = totalObra;
                 
-                payload[`obra_materiales_nombres_${n}`] = work.materials.filter(m => m.description.trim() !== '').map(m => m.description).join(', ');
-                payload[`obra_precio_material_sin_iva_${n}`] = Number(matSumSinIva.toFixed(2));
-                payload[`obra_iva_material_${n}`] = matIva;
-                payload[`obra_total_con_iva_${n}`] = totalObraConIva;
-            });
+                if (materialsDescriptions.length > 0) {
+                    payload[`obra_materiales_nombres`] = materialsDescriptions.join(', ');
+                }
+            }
 
             await axios.post(webhookUrl, payload);
             alert('Oferta enviada correctamente');
@@ -550,9 +559,25 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             }
 
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
-            const totalConIva = formData.amount;
-            const subtotal = totalConIva / 1.21;
-            const iva = totalConIva - subtotal;
+            const filteredWork = showWorkTable ? workItems.filter(it => 
+                (it.hours && it.hours !== '') || 
+                (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))
+            ) : [];
+
+            // Cálculo preciso de Subtotal e IVA (Materiales no llevan IVA)
+            const productsSubtotal = filteredItems.reduce((sum, it) => sum + ((parseFloat(it.price) || 0) * (parseInt(it.quantity) || 1)), 0);
+            const productsIva = productsSubtotal * 0.21;
+
+            const hoursSubtotal = filteredWork.reduce((sum, it) => sum + ((parseFloat(it.hours) || 0) * 30), 0);
+            const hoursIva = hoursSubtotal * 0.21;
+
+            const materialsSubtotal = filteredWork.reduce((sum, it) => {
+                return sum + it.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
+            }, 0);
+
+            const totalSubtotal = productsSubtotal + hoursSubtotal + materialsSubtotal;
+            const totalIva = productsIva + hoursIva;
+            const totalConIva = totalSubtotal + totalIva;
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/4c9f6f95-101e-48eb-8197-09cc14d6eeff';
 
@@ -570,22 +595,12 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             });
 
             // Añadir la obra como campo independiente si existe
-            if (showWorkTable) {
-                const filteredWork = workItems.filter(it =>
-                    (it.hours && it.hours !== '') ||
-                    (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))
-                );
-                if (filteredWork.length > 0) {
-                    const totalObra = filteredWork.reduce((sum, item) => {
-                        const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
-                        const matSum = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
-                        return sum + hoursPrice + matSum;
-                    }, 0);
-                    productFields['obra_descripcion'] = 'Obra de adaptación';
-                    productFields['obra_precio_unidad'] = totalObra.toFixed(2);
-                    productFields['obra_cantidad'] = 1;
-                    productFields['obra_total'] = totalObra.toFixed(2);
-                }
+            if (filteredWork.length > 0) {
+                const totalObra = hoursSubtotal + hoursIva + materialsSubtotal;
+                productFields['obra_descripcion'] = 'Obra de adaptación';
+                productFields['obra_precio_unidad'] = (hoursSubtotal + materialsSubtotal).toFixed(2);
+                productFields['obra_cantidad'] = 1;
+                productFields['obra_total'] = totalObra.toFixed(2);
             }
 
             const payload = {
@@ -597,8 +612,8 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 email_cliente: formData.email,
                 direccion_cliente: `${formData.address || ''}, ${formData.zip || ''}, ${formData.city || ''}`,
                 ...productFields,
-                subtotal: subtotal.toFixed(2),
-                total_iva: iva.toFixed(2),
+                subtotal: totalSubtotal.toFixed(2),
+                total_iva: totalIva.toFixed(2),
                 total_factura: totalConIva.toFixed(2)
             };
 
