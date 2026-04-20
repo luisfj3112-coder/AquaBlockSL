@@ -596,17 +596,6 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         }
     };
 
-            console.log('Enviando datos planos de factura al Webhook:', payload);
-
-            const response = await axios.post(webhookUrl, payload);
-            console.log('Respuesta del Webhook:', response.status);
-            alert('Factura enviada correctamente');
-        } catch (err) {
-            console.error('Error detallado al enviar factura:', err);
-            alert('Error al enviar la factura. Revisa la consola para más detalles.');
-        }
-    };
-
     const allImages = [
         ...images.map(img => ({
             ...img,
