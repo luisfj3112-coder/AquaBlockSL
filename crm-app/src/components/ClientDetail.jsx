@@ -446,8 +446,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 if (item.mastiles) payload[`mastiles_${n}`] = item.mastiles;
             });
 
-            // Cambios específicos para la OBRA en el webhook de oferta
+            // Cambios específicos para la OBRA como un producto más
             if (filteredWork.length > 0) {
+                const n = filteredItems.length + 1; // Siguiente número en la secuencia
                 let totalHours = 0;
                 let totalMatSum = 0;
                 filteredWork.forEach(work => {
@@ -457,12 +458,18 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
                 const hoursPriceSinIva = totalHours * 30;
                 const hoursIva = Number((hoursPriceSinIva * 0.21).toFixed(2));
-                const totalObraFinal = Number((hoursPriceSinIva + hoursIva + totalMatSum).toFixed(2));
+                const priceSinIvaFinal = hoursPriceSinIva + totalMatSum;
+                const totalConIvaFinal = hoursPriceSinIva + hoursIva + totalMatSum;
 
-                payload['descripcion_obra'] = 'Obra de adaptación';
-                payload['precio_obra_sin_iva'] = Number((hoursPriceSinIva + totalMatSum).toFixed(2));
-                payload['total_de_iva_de_las_horas_de_la_obra'] = hoursIva;
-                payload['total_obra'] = totalObraFinal;
+                payload[`descripcion_producto_${n}`] = 'Obra de adaptación';
+                payload[`cantidad_producto_${n}`] = 1;
+                payload[`precio_unidad_sin_iva_${n}`] = Number(priceSinIvaFinal.toFixed(2));
+                payload[`iva_unidad_${n}`] = hoursIva;
+                payload[`total_unidad_con_iva_${n}`] = Number(totalConIvaFinal.toFixed(2));
+                payload[`total_linea_con_iva_${n}`] = Number(totalConIvaFinal.toFixed(2));
+                
+                // Actualizar total_filas con el nuevo índice
+                payload.total_filas = n;
             }
 
             await axios.post(webhookUrl, payload);
