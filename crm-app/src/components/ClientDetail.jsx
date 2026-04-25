@@ -412,6 +412,10 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/64a10a1f-ae2b-4934-a809-dc6dc588b8ee';
             
+            const today = new Date();
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const formattedDate = `${today.getDate()} de ${monthNames[today.getMonth()]} de ${today.getFullYear()}`;
+
             const payload = {
                 tipo: 'oferta',
                 nombre: formData.name,
@@ -422,6 +426,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 cp: formData.zip,
                 num_oferta: formData.offer_num,
                 fecha_oferta: formData.offer_date,
+                fecha_actual: formattedDate,
                 importe_total: Number(parseFloat(formData.amount).toFixed(2)),
                 total_filas: totalFilas
             };
