@@ -30,6 +30,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
     const [images, setImages] = useState([]);
     const [pendingFiles, setPendingFiles] = useState([]);
     const [pendingPreviews, setPendingPreviews] = useState([]);
+    const [documents, setDocuments] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [autoGenerateNum, setAutoGenerateNum] = useState(false);
@@ -43,6 +44,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             }));
             if (client.id) {
                 fetchImages(client.id);
+                fetchDocuments(client.id);
                 fetchItems(client.id);
                 fetchWorkItems(client.id);
             }
@@ -125,6 +127,15 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             setImages(data);
         } catch (err) {
             console.error('Error fetching images', err);
+        }
+    };
+
+    const fetchDocuments = async (clientId) => {
+        try {
+            const { data } = await api.get(`/documents/${clientId}`);
+            setDocuments(data || []);
+        } catch (err) {
+            console.error('Error fetching documents', err);
         }
     };
 
@@ -411,12 +422,40 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const totalFilas = filteredItems.length + filteredWork.length;
 
             const webhookUrl = 'https://n-n8n.ywrumf.easypanel.host/webhook/64a10a1f-ae2b-4934-a809-dc6dc588b8ee';
+
+            // Save client to ensure we have an ID
+            let savedClientId = client?.id;
+            const offerTotal = filteredItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * 1.21 * (parseInt(item.quantity) || 1)), 0);
+            let workTotal = 0;
+            if (showWorkTable) {
+                workTotal = filteredWork.reduce((sum, item) => {
+                    const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
+                    const matPrice = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
+                    return sum + hoursPrice + matPrice;
+                }, 0);
+            }
+            const finalAmount = offerTotal + workTotal;
+
+            const savePayload = {
+                ...formData,
+                amount: finalAmount,
+                items: filteredItems,
+                workItems: filteredWork
+            };
+
+            if (savedClientId) {
+                await api.put(`/clients/${savedClientId}`, savePayload);
+            } else {
+                const res = await api.post('/clients', savePayload);
+                savedClientId = res.data.id;
+            }
             
             const today = new Date();
             const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
             const formattedDate = `${today.getDate()} de ${monthNames[today.getMonth()]} de ${today.getFullYear()}`;
 
             const payload = {
+                client_id: savedClientId,
                 tipo: 'oferta',
                 nombre: formData.name,
                 telefono: formData.phone,
@@ -489,6 +528,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
         try {
             let currentInvoiceNum = formData.invoice_num;
             let currentInvoiceDate = formData.invoice_date;
+            let savedClientId = client?.id;
 
             // If auto-generate is checked, always get a new number from the backend
             if (autoGenerateNum) {
@@ -535,10 +575,11 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                         workItems: parsedWork
                     };
 
-                    if (client && client.id) {
-                        await api.put(`/clients/${client.id}`, savePayload);
+                    if (savedClientId) {
+                        await api.put(`/clients/${savedClientId}`, savePayload);
                     } else {
                         const res = await api.post('/clients', savePayload);
+                        savedClientId = res.data.id;
                     }
 
                     if (onRefresh) onRefresh();
@@ -587,6 +628,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             }
 
             const payload = {
+                client_id: savedClientId,
                 tipo: 'factura',
                 numero_factura: currentInvoiceNum,
                 fecha_factura: currentInvoiceDate,
@@ -1071,6 +1113,49 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                                 <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleImageUpload} />
                             </label>
                         </div>
+                    </div>
+
+                    {/* Nueva sección de Documentos */}
+                    <div style={{ marginTop: '30px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            Documentos (Ofertas / Facturas)
+                        </h3>
+                        {documents.length === 0 ? (
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>No hay documentos generados para este cliente.</p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {documents.map(doc => (
+                                    <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', background: 'var(--panel-bg)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <FileText size={20} color="var(--accent-color)" />
+                                            <div>
+                                                <a href={doc.url} target="_blank" rel="noreferrer" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textDecoration: 'none' }}>
+                                                    {doc.name}
+                                                </a>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                                    {new Date(doc.created_at).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                if(window.confirm('¿Eliminar este documento?')) {
+                                                    await api.delete(`/documents/${doc.id}`);
+                                                    setDocuments(documents.filter(d => d.id !== doc.id));
+                                                }
+                                            }}
+                                            style={{ background: 'transparent', color: 'var(--error-color)', padding: '6px' }}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '10px' }}>
+                            Al hacer clic en Generar Oferta o Generar Factura, si configuraste n8n, los PDFs aparecerán aquí (debes cerrar y volver a abrir la ficha para refrescar o añadir un botón de refrescar).
+                        </p>
                     </div>
                 </form>
 
