@@ -642,7 +642,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 const totalItem = (priceUnit * qty).toFixed(2);
                 productFields[`descripcion_producto_${n}`] = item.description;
                 productFields[`precio_unidad_${n}`] = priceUnit.toFixed(2);
-                productFields[`precio_unidad_sin_iva_${n}`] = Number(priceUnit.toFixed(2));
+                productFields[`precio_unidad_sin_iva_${n}`] = priceUnit.toFixed(2);
                 productFields[`cantidad_${n}`] = qty;
                 productFields[`total_producto_${n}`] = totalItem;
             });
