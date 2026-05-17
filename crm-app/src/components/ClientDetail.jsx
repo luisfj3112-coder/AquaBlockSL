@@ -530,59 +530,12 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             let currentInvoiceDate = formData.invoice_date;
             let savedClientId = client?.id;
 
-            // If auto-generate is checked, always get a new number from the backend
+            // Determine invoice number and date
             if (autoGenerateNum) {
                 const generated = await handleGenerateInvoiceNum();
                 if (generated) {
                     currentInvoiceNum = generated.nextInvoiceNum;
                     currentInvoiceDate = generated.todayStr;
-
-                    const parsedItems = items.map(it => ({
-                        ...it,
-                        price: parseFloat(it.price) || 0,
-                        quantity: parseInt(it.quantity) || 1,
-                        medidas_ancho: it.medidas_ancho ? parseFloat(it.medidas_ancho) : null,
-                        medidas_alto: it.medidas_alto ? parseFloat(it.medidas_alto) : null,
-                        mastiles: it.mastiles ? parseFloat(it.mastiles) : null
-                    }));
-                    const parsedWork = workItems.map(it => {
-                        const matSum = it.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
-                        return {
-                            ...it,
-                            hours: parseFloat(it.hours) || 0,
-                            material_description: 'JSON:' + JSON.stringify(it.materials),
-                            material_price: matSum
-                        };
-                    });
-
-                    const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21 * (item.quantity || 1)), 0);
-                    let workTotal = 0;
-                    if (showWorkTable) {
-                        workTotal = parsedWork.reduce((sum, item) => {
-                            const hoursPrice = (item.hours || 0) * 30 * 1.21;
-                            const matPrice = item.material_price || 0;
-                            return sum + hoursPrice + matPrice;
-                        }, 0);
-                    }
-                    const finalAmount = offerTotal + workTotal;
-
-                    const savePayload = {
-                        ...formData,
-                        invoice_num: currentInvoiceNum,
-                        invoice_date: currentInvoiceDate,
-                        amount: finalAmount,
-                        items: parsedItems,
-                        workItems: parsedWork
-                    };
-
-                    if (savedClientId) {
-                        await api.put(`/clients/${savedClientId}`, savePayload);
-                    } else {
-                        const res = await api.post('/clients', savePayload);
-                        savedClientId = res.data.id;
-                    }
-
-                    if (onRefresh) onRefresh();
                 } else {
                     return;
                 }
@@ -593,8 +546,57 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 }
             }
 
+            // Always parse items and save/update client in DB to ensure consistency
+            const parsedItems = items.map(it => ({
+                ...it,
+                price: parseFloat(it.price) || 0,
+                quantity: parseInt(it.quantity) || 1,
+                medidas_ancho: it.medidas_ancho ? parseFloat(it.medidas_ancho) : null,
+                medidas_alto: it.medidas_alto ? parseFloat(it.medidas_alto) : null,
+                mastiles: it.mastiles ? parseFloat(it.mastiles) : null
+            }));
+            const parsedWork = workItems.map(it => {
+                const matSum = it.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                return {
+                    ...it,
+                    hours: parseFloat(it.hours) || 0,
+                    material_description: 'JSON:' + JSON.stringify(it.materials),
+                    material_price: matSum
+                };
+            });
+
+            const offerTotal = parsedItems.reduce((sum, item) => sum + (item.price * 1.21 * (item.quantity || 1)), 0);
+            let workTotal = 0;
+            if (showWorkTable) {
+                workTotal = parsedWork.reduce((sum, item) => {
+                    const hoursPrice = (item.hours || 0) * 30 * 1.21;
+                    const matPrice = item.material_price || 0;
+                    return sum + hoursPrice + matPrice;
+                }, 0);
+            }
+            const finalAmount = offerTotal + workTotal;
+
+            const savePayload = {
+                ...formData,
+                invoice_num: currentInvoiceNum,
+                invoice_date: currentInvoiceDate,
+                amount: finalAmount,
+                items: parsedItems,
+                workItems: parsedWork
+            };
+
+            if (savedClientId) {
+                await api.put(`/clients/${savedClientId}`, savePayload);
+            } else {
+                const res = await api.post('/clients', savePayload);
+                savedClientId = res.data.id;
+            }
+
+            if (onRefresh) onRefresh();
+
+            // Prepare webhook payload
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
-            const totalConIva = formData.amount;
+            const totalConIva = finalAmount;
             const subtotal = totalConIva / 1.21;
             const iva = totalConIva - subtotal;
 
