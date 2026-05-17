@@ -588,6 +588,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 }
             } else {
                 currentInvoiceNum = '';
+                if (!currentInvoiceDate || currentInvoiceDate.trim() === '') {
+                    currentInvoiceDate = new Date().toISOString().split('T')[0];
+                }
             }
 
             const filteredItems = items.filter(it => it.description && it.description.trim() !== '');
@@ -638,7 +641,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 client_id: savedClientId,
                 tipo: 'factura',
                 numero_factura: currentInvoiceNum,
-                fecha_factura: currentInvoiceDate,
+                fecha_factura: currentInvoiceDate || new Date().toISOString().split('T')[0],
                 nombre_cliente: formData.name,
                 dni_cliente: formData.dni,
                 email_cliente: formData.email,
