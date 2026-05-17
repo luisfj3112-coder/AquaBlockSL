@@ -454,6 +454,34 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
             const formattedDate = `${today.getDate()} de ${monthNames[today.getMonth()]} de ${today.getFullYear()}`;
 
+            let cleanAddress = (formData.address || '').trim();
+            let cleanZip = (formData.zip || '').trim();
+            let cleanCity = (formData.city || '').trim();
+
+            const zipMatch = cleanAddress.match(/\b\d{5}\b/);
+            if (zipMatch) {
+                const zipIndex = zipMatch.index;
+                const streetPart = cleanAddress.substring(0, zipIndex).replace(/,\s*$/, '').trim();
+                const remainder = cleanAddress.substring(zipIndex).trim();
+                cleanAddress = streetPart;
+                if (!cleanZip) cleanZip = zipMatch[0];
+                if (!cleanCity) {
+                    cleanCity = remainder.replace(zipMatch[0], '').replace(/^[,\s]+/, '').replace(/[,\s]+$/, '').trim();
+                }
+            } else if (cleanAddress.includes(',')) {
+                const parts = cleanAddress.split(',');
+                if (parts.length > 1) {
+                    const potentialCity = parts[parts.length - 1].trim();
+                    if (!cleanCity || cleanCity.toLowerCase() === potentialCity.toLowerCase()) {
+                        cleanCity = potentialCity;
+                        cleanAddress = parts.slice(0, -1).join(',').trim();
+                    }
+                }
+            }
+            
+            const finalDireccionCliente = cleanAddress;
+            const finalDireccion2 = [cleanZip, cleanCity].filter(Boolean).join(', ');
+
             const payload = {
                 client_id: savedClientId,
                 tipo: 'oferta',
@@ -463,9 +491,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 direccion: formData.address,
                 poblacion: formData.city,
                 cp: formData.zip,
-                direccion_cliente: formData.address || '',
-                direccion_2: [formData.zip ? String(formData.zip).trim() : '', formData.city ? String(formData.city).trim() : ''].filter(Boolean).join(', '),
-                "direccion 2": [formData.zip ? String(formData.zip).trim() : '', formData.city ? String(formData.city).trim() : ''].filter(Boolean).join(', '),
+                direccion_cliente: finalDireccionCliente,
+                direccion_2: finalDireccion2,
+                "direccion 2": finalDireccion2,
                 num_oferta: formData.offer_num,
                 fecha_oferta: formData.offer_date,
                 fecha_actual: formattedDate,
@@ -643,6 +671,34 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 }
             }
 
+            let cleanAddress = (formData.address || '').trim();
+            let cleanZip = (formData.zip || '').trim();
+            let cleanCity = (formData.city || '').trim();
+
+            const zipMatch = cleanAddress.match(/\b\d{5}\b/);
+            if (zipMatch) {
+                const zipIndex = zipMatch.index;
+                const streetPart = cleanAddress.substring(0, zipIndex).replace(/,\s*$/, '').trim();
+                const remainder = cleanAddress.substring(zipIndex).trim();
+                cleanAddress = streetPart;
+                if (!cleanZip) cleanZip = zipMatch[0];
+                if (!cleanCity) {
+                    cleanCity = remainder.replace(zipMatch[0], '').replace(/^[,\s]+/, '').replace(/[,\s]+$/, '').trim();
+                }
+            } else if (cleanAddress.includes(',')) {
+                const parts = cleanAddress.split(',');
+                if (parts.length > 1) {
+                    const potentialCity = parts[parts.length - 1].trim();
+                    if (!cleanCity || cleanCity.toLowerCase() === potentialCity.toLowerCase()) {
+                        cleanCity = potentialCity;
+                        cleanAddress = parts.slice(0, -1).join(',').trim();
+                    }
+                }
+            }
+            
+            const finalDireccionCliente = cleanAddress;
+            const finalDireccion2 = [cleanZip, cleanCity].filter(Boolean).join(', ');
+
             const payload = {
                 client_id: savedClientId,
                 tipo: 'factura',
@@ -654,9 +710,9 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 nombre_cliente: formData.name,
                 dni_cliente: formData.dni,
                 email_cliente: formData.email,
-                direccion_cliente: formData.address || '',
-                direccion_2: [formData.zip ? String(formData.zip).trim() : '', formData.city ? String(formData.city).trim() : ''].filter(Boolean).join(', '),
-                "direccion 2": [formData.zip ? String(formData.zip).trim() : '', formData.city ? String(formData.city).trim() : ''].filter(Boolean).join(', '),
+                direccion_cliente: finalDireccionCliente,
+                direccion_2: finalDireccion2,
+                "direccion 2": finalDireccion2,
                 ...productFields,
                 subtotal: subtotal.toFixed(2),
                 total_iva: iva.toFixed(2),
