@@ -586,7 +586,7 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                 } else {
                     return;
                 }
-            } else if (!currentInvoiceNum || currentInvoiceNum.trim() === '') {
+            } else {
                 currentInvoiceNum = '';
             }
 
@@ -601,10 +601,11 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
             filteredItems.forEach((item, index) => {
                 const n = index + 1;
                 const qty = parseInt(item.quantity) || 1;
-                const priceUnit = parseFloat(item.price);
+                const priceUnit = parseFloat(item.price) || 0;
                 const totalItem = (priceUnit * qty).toFixed(2);
                 productFields[`descripcion_producto_${n}`] = item.description;
                 productFields[`precio_unidad_${n}`] = priceUnit.toFixed(2);
+                productFields[`precio_unidad_sin_iva_${n}`] = Number(priceUnit.toFixed(2));
                 productFields[`cantidad_${n}`] = qty;
                 productFields[`total_producto_${n}`] = totalItem;
             });
@@ -615,15 +616,21 @@ const ClientDetail = ({ client, onClose, onSave, onRefresh }) => {
                     (it.materials && it.materials.some(m => m.description && m.description.trim() !== ''))
                 );
                 if (filteredWork.length > 0) {
-                    const totalObra = filteredWork.reduce((sum, item) => {
-                        const hoursPrice = (parseFloat(item.hours) || 0) * 30 * 1.21;
-                        const matSum = item.materials.reduce((mSum, m) => mSum + (parseFloat(m.price) || 0), 0);
-                        return sum + hoursPrice + matSum;
-                    }, 0);
+                    let totalHours = 0;
+                    let totalMatSum = 0;
+                    filteredWork.forEach(work => {
+                        totalHours += parseFloat(work.hours) || 0;
+                        totalMatSum += work.materials.reduce((sum, m) => sum + (parseFloat(m.price) || 0), 0);
+                    });
+
+                    const hoursPriceSinIva = totalHours * 30;
+                    const priceSinIvaFinal = hoursPriceSinIva + totalMatSum;
+
                     productFields['obra_descripcion'] = 'Obra de adaptación';
-                    productFields['obra_precio_unidad'] = totalObra.toFixed(2);
+                    productFields['obra_precio_unidad'] = priceSinIvaFinal.toFixed(2);
+                    productFields['obra_precio_unidad_sin_iva'] = priceSinIvaFinal.toFixed(2);
                     productFields['obra_cantidad'] = 1;
-                    productFields['obra_total'] = totalObra.toFixed(2);
+                    productFields['obra_total'] = priceSinIvaFinal.toFixed(2);
                 }
             }
 
